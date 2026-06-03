@@ -1,0 +1,35 @@
+name: live-scores
+
+on:
+  schedule:
+    # GitHub's minimum is 5 minutes. Adjust to */10 if rate-limited.
+    - cron: '*/5 * * * *'
+  workflow_dispatch:  # also allow manual triggers from the Actions tab
+
+# Prevent concurrent runs (saves duplicate API calls if a tick is slow)
+concurrency:
+  group: live-scores
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Run live-scores
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
+          ABLY_API_KEY: ${{ secrets.ABLY_API_KEY }}
+        run: node live-scores.js

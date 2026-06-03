@@ -1,0 +1,722 @@
+[
+  {
+    "match_id": "wc2026_g_A01",
+    "home": "Mexico",
+    "away": "South Africa",
+    "kickoff_ts": 1781204400,
+    "group": "A",
+    "matchday": 1,
+    "venue": "Mexico City",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_A02",
+    "home": "South Korea",
+    "away": "Czechia",
+    "kickoff_ts": 1781226000,
+    "group": "A",
+    "matchday": 1,
+    "venue": "Guadalajara",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_B01",
+    "home": "Canada",
+    "away": "Bosnia-Herzegovina",
+    "kickoff_ts": 1781290800,
+    "group": "B",
+    "matchday": 1,
+    "venue": "Toronto",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_D01",
+    "home": "United States",
+    "away": "Paraguay",
+    "kickoff_ts": 1781312400,
+    "group": "D",
+    "matchday": 1,
+    "venue": "Los Angeles",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_D02",
+    "home": "Australia",
+    "away": "Turkey",
+    "kickoff_ts": 1781323200,
+    "group": "D",
+    "matchday": 1,
+    "venue": "Vancouver",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_B02",
+    "home": "Qatar",
+    "away": "Switzerland",
+    "kickoff_ts": 1781377200,
+    "group": "B",
+    "matchday": 1,
+    "venue": "San Francisco Bay Area",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_C01",
+    "home": "Brazil",
+    "away": "Morocco",
+    "kickoff_ts": 1781388000,
+    "group": "C",
+    "matchday": 1,
+    "venue": "New York/New Jersey",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_C02",
+    "home": "Haiti",
+    "away": "Scotland",
+    "kickoff_ts": 1781398800,
+    "group": "C",
+    "matchday": 1,
+    "venue": "Boston",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_E01",
+    "home": "Germany",
+    "away": "Curacao",
+    "kickoff_ts": 1781456400,
+    "group": "E",
+    "matchday": 1,
+    "venue": "Houston",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_F01",
+    "home": "Netherlands",
+    "away": "Japan",
+    "kickoff_ts": 1781467200,
+    "group": "F",
+    "matchday": 1,
+    "venue": "Dallas",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_E02",
+    "home": "Ivory Coast",
+    "away": "Ecuador",
+    "kickoff_ts": 1781478000,
+    "group": "E",
+    "matchday": 1,
+    "venue": "Philadelphia",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_F02",
+    "home": "Sweden",
+    "away": "Tunisia",
+    "kickoff_ts": 1781485200,
+    "group": "F",
+    "matchday": 1,
+    "venue": "Monterrey",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_H01",
+    "home": "Spain",
+    "away": "Cape Verde",
+    "kickoff_ts": 1781539200,
+    "group": "H",
+    "matchday": 1,
+    "venue": "Atlanta",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_G01",
+    "home": "Belgium",
+    "away": "Egypt",
+    "kickoff_ts": 1781550000,
+    "group": "G",
+    "matchday": 1,
+    "venue": "Seattle",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_H02",
+    "home": "Saudi Arabia",
+    "away": "Uruguay",
+    "kickoff_ts": 1781560800,
+    "group": "H",
+    "matchday": 1,
+    "venue": "Miami",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_G02",
+    "home": "Iran",
+    "away": "New Zealand",
+    "kickoff_ts": 1781571600,
+    "group": "G",
+    "matchday": 1,
+    "venue": "Los Angeles",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_I01",
+    "home": "France",
+    "away": "Senegal",
+    "kickoff_ts": 1781636400,
+    "group": "I",
+    "matchday": 1,
+    "venue": "New York/New Jersey",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_I02",
+    "home": "Iraq",
+    "away": "Norway",
+    "kickoff_ts": 1781647200,
+    "group": "I",
+    "matchday": 1,
+    "venue": "Boston",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_J01",
+    "home": "Argentina",
+    "away": "Algeria",
+    "kickoff_ts": 1781658000,
+    "group": "J",
+    "matchday": 1,
+    "venue": "Kansas City",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_J02",
+    "home": "Austria",
+    "away": "Jordan",
+    "kickoff_ts": 1781668800,
+    "group": "J",
+    "matchday": 1,
+    "venue": "San Francisco Bay Area",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_K01",
+    "home": "Portugal",
+    "away": "DR Congo",
+    "kickoff_ts": 1781715600,
+    "group": "K",
+    "matchday": 1,
+    "venue": "Houston",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_L01",
+    "home": "England",
+    "away": "Croatia",
+    "kickoff_ts": 1781726400,
+    "group": "L",
+    "matchday": 1,
+    "venue": "Dallas",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_L02",
+    "home": "Ghana",
+    "away": "Panama",
+    "kickoff_ts": 1781737200,
+    "group": "L",
+    "matchday": 1,
+    "venue": "Toronto",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_K02",
+    "home": "Uzbekistan",
+    "away": "Colombia",
+    "kickoff_ts": 1781748000,
+    "group": "K",
+    "matchday": 1,
+    "venue": "Mexico City",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_A03",
+    "home": "Czechia",
+    "away": "South Africa",
+    "kickoff_ts": 1781798400,
+    "group": "A",
+    "matchday": 2,
+    "venue": "Atlanta",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_B03",
+    "home": "Switzerland",
+    "away": "Bosnia-Herzegovina",
+    "kickoff_ts": 1781809200,
+    "group": "B",
+    "matchday": 2,
+    "venue": "Los Angeles",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_A04",
+    "home": "Mexico",
+    "away": "South Korea",
+    "kickoff_ts": 1781830800,
+    "group": "A",
+    "matchday": 2,
+    "venue": "Guadalajara",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_B04",
+    "home": "Canada",
+    "away": "Qatar",
+    "kickoff_ts": 1781830800,
+    "group": "B",
+    "matchday": 2,
+    "venue": "Vancouver",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_D03",
+    "home": "United States",
+    "away": "Australia",
+    "kickoff_ts": 1781895600,
+    "group": "D",
+    "matchday": 2,
+    "venue": "Seattle",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_C03",
+    "home": "Scotland",
+    "away": "Morocco",
+    "kickoff_ts": 1781906400,
+    "group": "C",
+    "matchday": 2,
+    "venue": "Boston",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_C04",
+    "home": "Brazil",
+    "away": "Haiti",
+    "kickoff_ts": 1781917200,
+    "group": "C",
+    "matchday": 2,
+    "venue": "Philadelphia",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_D04",
+    "home": "Turkey",
+    "away": "Paraguay",
+    "kickoff_ts": 1781917200,
+    "group": "D",
+    "matchday": 2,
+    "venue": "San Francisco Bay Area",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_F03",
+    "home": "Netherlands",
+    "away": "Sweden",
+    "kickoff_ts": 1781974800,
+    "group": "F",
+    "matchday": 2,
+    "venue": "Houston",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_E03",
+    "home": "Germany",
+    "away": "Ivory Coast",
+    "kickoff_ts": 1781985600,
+    "group": "E",
+    "matchday": 2,
+    "venue": "Toronto",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_E04",
+    "home": "Ecuador",
+    "away": "Curacao",
+    "kickoff_ts": 1782000000,
+    "group": "E",
+    "matchday": 2,
+    "venue": "Kansas City",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_F04",
+    "home": "Tunisia",
+    "away": "Japan",
+    "kickoff_ts": 1782014400,
+    "group": "F",
+    "matchday": 2,
+    "venue": "Monterrey",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_H03",
+    "home": "Spain",
+    "away": "Saudi Arabia",
+    "kickoff_ts": 1782057600,
+    "group": "H",
+    "matchday": 2,
+    "venue": "Atlanta",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_G03",
+    "home": "Belgium",
+    "away": "Iran",
+    "kickoff_ts": 1782068400,
+    "group": "G",
+    "matchday": 2,
+    "venue": "Los Angeles",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_H04",
+    "home": "Uruguay",
+    "away": "Cape Verde",
+    "kickoff_ts": 1782079200,
+    "group": "H",
+    "matchday": 2,
+    "venue": "Miami",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_G04",
+    "home": "New Zealand",
+    "away": "Egypt",
+    "kickoff_ts": 1782090000,
+    "group": "G",
+    "matchday": 2,
+    "venue": "Vancouver",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_J03",
+    "home": "Argentina",
+    "away": "Austria",
+    "kickoff_ts": 1782147600,
+    "group": "J",
+    "matchday": 2,
+    "venue": "Dallas",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_I03",
+    "home": "France",
+    "away": "Iraq",
+    "kickoff_ts": 1782162000,
+    "group": "I",
+    "matchday": 2,
+    "venue": "Philadelphia",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_I04",
+    "home": "Norway",
+    "away": "Senegal",
+    "kickoff_ts": 1782172800,
+    "group": "I",
+    "matchday": 2,
+    "venue": "New York/New Jersey",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_J04",
+    "home": "Jordan",
+    "away": "Algeria",
+    "kickoff_ts": 1782183600,
+    "group": "J",
+    "matchday": 2,
+    "venue": "San Francisco Bay Area",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_K03",
+    "home": "Portugal",
+    "away": "Uzbekistan",
+    "kickoff_ts": 1782234000,
+    "group": "K",
+    "matchday": 2,
+    "venue": "Houston",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_L03",
+    "home": "England",
+    "away": "Ghana",
+    "kickoff_ts": 1782244800,
+    "group": "L",
+    "matchday": 2,
+    "venue": "Boston",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_L04",
+    "home": "Panama",
+    "away": "Croatia",
+    "kickoff_ts": 1782255600,
+    "group": "L",
+    "matchday": 2,
+    "venue": "Toronto",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_K04",
+    "home": "Colombia",
+    "away": "DR Congo",
+    "kickoff_ts": 1782266400,
+    "group": "K",
+    "matchday": 2,
+    "venue": "Guadalajara",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_B06",
+    "home": "Bosnia-Herzegovina",
+    "away": "Qatar",
+    "kickoff_ts": 1782327600,
+    "group": "B",
+    "matchday": 3,
+    "venue": "Seattle",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_C05",
+    "home": "Scotland",
+    "away": "Brazil",
+    "kickoff_ts": 1782338400,
+    "group": "C",
+    "matchday": 3,
+    "venue": "Miami",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_C06",
+    "home": "Morocco",
+    "away": "Haiti",
+    "kickoff_ts": 1782338400,
+    "group": "C",
+    "matchday": 3,
+    "venue": "Atlanta",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_A05",
+    "home": "Czechia",
+    "away": "Mexico",
+    "kickoff_ts": 1782349200,
+    "group": "A",
+    "matchday": 3,
+    "venue": "Mexico City",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_A06",
+    "home": "South Africa",
+    "away": "South Korea",
+    "kickoff_ts": 1782349200,
+    "group": "A",
+    "matchday": 3,
+    "venue": "Monterrey",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_B05",
+    "home": "Switzerland",
+    "away": "Canada",
+    "kickoff_ts": 1782349200,
+    "group": "B",
+    "matchday": 3,
+    "venue": "Vancouver",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_E05",
+    "home": "Ecuador",
+    "away": "Germany",
+    "kickoff_ts": 1782417600,
+    "group": "E",
+    "matchday": 3,
+    "venue": "New York/New Jersey",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_E06",
+    "home": "Curacao",
+    "away": "Ivory Coast",
+    "kickoff_ts": 1782417600,
+    "group": "E",
+    "matchday": 3,
+    "venue": "Philadelphia",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_F05",
+    "home": "Japan",
+    "away": "Sweden",
+    "kickoff_ts": 1782428400,
+    "group": "F",
+    "matchday": 3,
+    "venue": "Dallas",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_F06",
+    "home": "Tunisia",
+    "away": "Netherlands",
+    "kickoff_ts": 1782428400,
+    "group": "F",
+    "matchday": 3,
+    "venue": "Kansas City",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_D05",
+    "home": "Turkey",
+    "away": "United States",
+    "kickoff_ts": 1782439200,
+    "group": "D",
+    "matchday": 3,
+    "venue": "Los Angeles",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_D06",
+    "home": "Paraguay",
+    "away": "Australia",
+    "kickoff_ts": 1782439200,
+    "group": "D",
+    "matchday": 3,
+    "venue": "San Francisco Bay Area",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_I05",
+    "home": "Norway",
+    "away": "France",
+    "kickoff_ts": 1782500400,
+    "group": "I",
+    "matchday": 3,
+    "venue": "Boston",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_I06",
+    "home": "Senegal",
+    "away": "Iraq",
+    "kickoff_ts": 1782500400,
+    "group": "I",
+    "matchday": 3,
+    "venue": "Toronto",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_H05",
+    "home": "Cape Verde",
+    "away": "Saudi Arabia",
+    "kickoff_ts": 1782518400,
+    "group": "H",
+    "matchday": 3,
+    "venue": "Houston",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_H06",
+    "home": "Uruguay",
+    "away": "Spain",
+    "kickoff_ts": 1782518400,
+    "group": "H",
+    "matchday": 3,
+    "venue": "Guadalajara",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_G05",
+    "home": "Egypt",
+    "away": "Iran",
+    "kickoff_ts": 1782529200,
+    "group": "G",
+    "matchday": 3,
+    "venue": "Seattle",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_G06",
+    "home": "New Zealand",
+    "away": "Belgium",
+    "kickoff_ts": 1782529200,
+    "group": "G",
+    "matchday": 3,
+    "venue": "Vancouver",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_L05",
+    "home": "Panama",
+    "away": "England",
+    "kickoff_ts": 1782594000,
+    "group": "L",
+    "matchday": 3,
+    "venue": "New York/New Jersey",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_L06",
+    "home": "Croatia",
+    "away": "Ghana",
+    "kickoff_ts": 1782594000,
+    "group": "L",
+    "matchday": 3,
+    "venue": "Philadelphia",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_K05",
+    "home": "Colombia",
+    "away": "Portugal",
+    "kickoff_ts": 1782601200,
+    "group": "K",
+    "matchday": 3,
+    "venue": "Miami",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_K06",
+    "home": "DR Congo",
+    "away": "Uzbekistan",
+    "kickoff_ts": 1782601200,
+    "group": "K",
+    "matchday": 3,
+    "venue": "Atlanta",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_J05",
+    "home": "Algeria",
+    "away": "Austria",
+    "kickoff_ts": 1782612000,
+    "group": "J",
+    "matchday": 3,
+    "venue": "Kansas City",
+    "stage": "group"
+  },
+  {
+    "match_id": "wc2026_g_J06",
+    "home": "Jordan",
+    "away": "Argentina",
+    "kickoff_ts": 1782612000,
+    "group": "J",
+    "matchday": 3,
+    "venue": "Dallas",
+    "stage": "group"
+  }
+]
