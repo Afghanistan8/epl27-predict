@@ -8,7 +8,7 @@
 // (uses deploy_checkpoint.json as a local log).
 
 import { createClient, createAccount } from 'genlayer-js';
-import { studionet } from 'genlayer-js/chains';
+import { testnetBradbury } from 'genlayer-js/chains';
 import { TransactionStatus } from 'genlayer-js/types';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
@@ -32,7 +32,7 @@ const account = createAccount(PRIVATE_KEY);
 console.log(`Deploying from: ${account.address}`);
 
 const client = createClient({
-  chain: studionet,
+  chain: testnetBradbury,
   account,
 });
 
@@ -55,17 +55,19 @@ const saveCheckpoint = () =>
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function dateFromKickoff(kickoff_ts) {
-  // YYYY-MM-DD in UTC — what the contract uses to build BBC URL
+  // YYYY-MM-DD in UTC Ã¢â‚¬â€ what the contract uses to build BBC URL
   return new Date(kickoff_ts * 1000).toISOString().slice(0, 10);
 }
 
 function extractContractAddress(receipt) {
-  // Try a few shapes that have appeared in genlayer-js docs/examples
   return (
     receipt?.data?.contract_address ||
     receipt?.contract_address ||
     receipt?.contractAddress ||
+    receipt?.recipient ||
     receipt?.to ||
+    receipt?.tx_data_decoded?.contract_address ||
+    receipt?.tx_data?.contract_address ||
     null
   );
 }
@@ -82,12 +84,12 @@ for (let i = 0; i < fixtures.length; i++) {
   const label = `[${i + 1}/${fixtures.length}] ${f.match_id} ${f.home} vs ${f.away} (${game_date})`;
 
   if (deployed[f.match_id]) {
-    console.log(`✓ ${label}  →  ${deployed[f.match_id]}  (already done)`);
+    console.log(`Ã¢Å“â€œ ${label}  Ã¢â€ â€™  ${deployed[f.match_id]}  (already done)`);
     skipCount++;
     continue;
   }
 
-  console.log(`\n→ ${label}`);
+  console.log(`\nÃ¢â€ â€™ ${label}`);
 
   try {
     // Deploy the contract. Constructor signature: (team1, team2, game_date)
@@ -100,17 +102,17 @@ for (let i = 0; i < fixtures.length; i++) {
 
     const receipt = await client.waitForTransactionReceipt({
       hash: txHash,
-      status: TransactionStatus.FINALIZED,
-      retries: 120,    // up to ~10 min
+      status: TransactionStatus.ACCEPTED,
+      retries: 60,    // up to ~5 min
       interval: 5000,
     });
 
     const contractAddress = extractContractAddress(receipt);
     if (!contractAddress) {
-      console.error('  receipt:', JSON.stringify(receipt, null, 2).slice(0, 500));
+      console.error('  receipt:', JSON.stringify(receipt, (k, v) => typeof v === 'bigint' ? v.toString() : v, 2).slice(0, 2000));
       throw new Error('No contract_address in receipt');
     }
-    console.log(`  ✓ ${contractAddress}`);
+    console.log(`  Ã¢Å“â€œ ${contractAddress}`);
 
     // Upsert match metadata to Supabase
     const { error: mErr } = await sb.from('matches').upsert({
@@ -141,7 +143,7 @@ for (let i = 0; i < fixtures.length; i++) {
     // Small pause between deploys (be gentle to the network)
     await sleep(2000);
   } catch (err) {
-    console.error(`  ✗ FAILED: ${err.message}`);
+    console.error(`  Ã¢Å“â€” FAILED: ${err.message}`);
     failures.push({ match_id: f.match_id, error: err.message });
     failCount++;
   }

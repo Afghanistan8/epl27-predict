@@ -9,9 +9,9 @@
     "scores": "node live-scores.js"
   },
   "dependencies": {
-    "genlayer-js": "^0.6.0",
     "@supabase/supabase-js": "^2.45.0",
     "ably": "^2.5.0",
-    "dotenv": "^16.4.0"
+    "dotenv": "^16.4.0",
+    "genlayer-js": "^1.1.8"
   }
 }

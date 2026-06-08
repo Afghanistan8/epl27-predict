@@ -1,92 +1,180 @@
-# WC Predict — Deploy Script
+# WC '26 Predict
 
-Deploys 72 `PredictionMarket` contracts (one per group-stage match) to GenLayer studionet and indexes them in Supabase.
+**An AI-resolved, fully on-chain prediction market for the 2026 FIFA World Cup, built on [GenLayer](https://genlayer.com) Bradbury testnet.**
 
-## Files you need in this folder
+🔗 Live: [predictwc.xyz](https://predictwc.xyz)
+
+---
+
+## What it is
+
+WC '26 Predict lets anyone make pari-mutuel predictions (Home / Draw / Away) on every match of the 2026 FIFA World Cup using $GEN test tokens. Each match has its own Intelligent Contract that, after the final whistle, **scrapes BBC Sport directly via LLM consensus** to determine the result and pay out winners — no human resolver, no centralized oracle, no admin keys needed.
+
+72 group-stage contracts are already deployed on GenLayer Bradbury testnet, one per match, accepting predictions ahead of the June 11 2026 kickoff.
+
+---
+
+## Why GenLayer
+
+This project uses two flagship features of GenLayer that no traditional smart contract platform can offer:
+
+### 1. Web rendering inside the contract
+
+In `prediction_market.py`, the contract reads the live BBC Sport scoreboard during execution:
+
+```python
+web_data = gl.nondet.web.render(resolution_url, mode="text")
+```
+
+The contract literally browses the web at resolution time — no oracle service, no off-chain pusher, no centralized backend. The BBC Sport page itself **is** the source of truth.
+
+### 2. LLM-based consensus for ambiguous data
+
+Match results are extracted by an LLM, with multiple validators running the same prompt in parallel and only agreeing if they reach the same JSON output:
+
+```python
+result_json = gl.eq_principle.strict_eq(get_match_result)
+```
+
+The validators independently parse the BBC Sport HTML, identify the right match, extract the 90-minute regulation score, and return structured JSON. If they disagree, no result is finalized. The strict equivalence principle guarantees deterministic outcomes from non-deterministic inputs — the unique innovation GenLayer enables.
+
+### What this replaces
+
+| Traditional approach | This project |
+|---|---|
+| Chainlink + paid feed for sports scores | Free, direct from BBC Sport |
+| Custom backend pushing results | No backend, contract self-resolves |
+| Manual admin clicks to resolve | Fully autonomous via cron |
+| Single trusted oracle | Multiple validators reach consensus |
+
+---
+
+## Architecture
 
 ```
-wc-predict-deploy/
-├── deploy.js              ← main script (this repo)
-├── package.json           ← npm deps  (this repo)
-├── .env.example           ← env template (this repo)
-├── .env                   ← YOU create this (gitignored)
-├── fixtures.json          ← from earlier — 72 World Cup matches
-└── prediction_market.py   ← from earlier — the contract source
+Frontend (vanilla JS)  --read-->  Supabase (mirror of on-chain state)
+        |                                  ^
+        +--write via wallet--> GenLayer    |
+                              Contracts    |
+                                  ^        |
+                                  |        |
+                       resolve()  |   live-scores cron
+                                  |   (football-data.org)
+              +-------------------+
+              |
+       Resolution cron (every 10 min)
+       Phase A: poll pending resolutions
+       Phase B: submit new resolve() calls
 ```
 
-## Setup (one time)
+### Components
 
-### 1. Install dependencies
+- **`prediction_market.py`** — Intelligent Contract. One instance per match. Holds the pari-mutuel pools, accepts predictions, calls BBC Sport via LLM consensus to resolve.
+- **`deploy.js`** — Deploys 72 contracts in sequence, one per group-stage fixture, with resume-on-crash via checkpoint file.
+- **`fixtures.json`** — All 72 group-stage matches with kickoff times, including playoff winners.
+- **`frontend/`** — Vanilla HTML/CSS/JS frontend with wallet integration (OKX, MetaMask, any EIP-1193 provider), live pool reads, prediction submission, My Picks, and Leaderboard.
+- **`cron/api/live-scores.js`** — Vercel endpoint polling football-data.org for live scores. Mirrors to Supabase and broadcasts via Ably for real-time UI.
+- **`cron/api/resolve-matches.js`** — Vercel endpoint calling `resolve()` on contracts after their match ends. Two-phase: Phase A polls in-flight LLM consensus, Phase B submits new resolutions.
+- **Supabase** — read-mirror of on-chain state. Frontend reads from Supabase for sub-second loads; contracts remain the source of truth.
+
+---
+
+## Contract methods
+
+```python
+submit_prediction(pick)   # payable; min 2 GEN; pick in {home, draw, away}
+resolve()                 # triggers LLM consensus on BBC Sport
+claim()                   # pari-mutuel payout to winning predictors
+refund()                  # refund path when winning pool is 0% or 100%
+mark_postponed()          # admin-only escape hatch
+```
+
+### Read views
+
+```python
+get_match_info() -> {team1, team2, game_date, status, result, final_score, admin}
+get_pools() -> {home, draw, away, total}
+get_my_prediction(user) -> {has_predicted, pick, stake, claimed}
+expected_payout(user) -> u256
+```
+
+### Refund edge cases (Option X)
+
+If after resolution:
+- **0% of the pool** picked correctly → refund everyone
+- **100% of the pool** picked correctly → refund everyone
+
+This prevents the contract from holding unclaimable balance.
+
+---
+
+## Network
+
+- **GenLayer Bradbury testnet** (chain ID 4221)
+- RPC: `https://rpc-bradbury.genlayer.com`
+- Explorer: [explorer-bradbury.genlayer.com](https://explorer-bradbury.genlayer.com)
+- Faucet: [testnet-faucet.genlayer.foundation](https://testnet-faucet.genlayer.foundation)
+
+72 contracts live, all deployed from a single admin wallet. Contracts are non-upgradeable.
+
+---
+
+## Running locally
 
 ```bash
-cd wc-predict-deploy
+# 1. Deploy contracts (one-time, ~5 hours for 72 matches on Bradbury)
+cp .env.example .env   # fill in PRIVATE_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY
 npm install
+node deploy.js
+
+# 2. Frontend (vanilla JS, no build step)
+cd frontend
+npx serve
+
+# 3. Cron endpoints (Vercel)
+cd cron
+npm install
+vercel deploy --prod
 ```
 
-Takes ~30 seconds.
-
-### 2. Set up `.env`
-
-```bash
-cp .env.example .env
-```
-
-Open `.env` and fill in the three values:
-
-- **`PRIVATE_KEY`**: Export from MetaMask (Account 1, the one with 100 GEN). See `.env.example` for steps.
-- **`SUPABASE_URL`**: Your Supabase project URL (looks like `https://xxx.supabase.co`)
-- **`SUPABASE_SERVICE_KEY`**: The Secret key from your Supabase API Keys page (starts with `sb_secret_`)
-
-⚠️ **Security warning:** Never commit `.env` to git. Never share your private key.
-
-### 3. Verify the source files are in place
-
-Make sure `fixtures.json` (72 matches) and `prediction_market.py` (the contract) are in this folder.
-
-## Run
-
-```bash
-npm run deploy
-```
-
-Or directly: `node deploy.js`
-
-### What you'll see
+Required env vars:
 
 ```
-Loaded 72 fixtures and contract source
-
-Deploying from: 0x4184bc5E5444F250767E8D33A49817A9B4FB0df3
-Consensus contract initialized
-
-→ [1/72] wc2026_g_A01 Mexico vs South Africa (2026-06-11)
-  tx: 0xabc...
-  ✓ 0xdef...
-
-→ [2/72] wc2026_g_A02 South Korea vs Czechia (2026-06-11)
-  ...
+PRIVATE_KEY                 # deploy + resolve wallet
+SUPABASE_URL                # your Supabase project URL
+SUPABASE_SERVICE_KEY        # for cron writes
+FOOTBALL_DATA_API_KEY       # live-scores cron (free at football-data.org)
+ABLY_API_KEY                # real-time score broadcast (optional)
+CRON_SECRET                 # bearer token for cron-job.org pings
 ```
 
-### Expected runtime
+---
 
-Each deploy: ~30–60 seconds (deterministic, no LLM consensus needed for `__init__`).
+## Built with
 
-Total: **35–70 minutes** for all 72 contracts. Leave it running.
+- **GenLayer** — intelligent contracts (Python), LLM consensus, web rendering
+- **genlayer-js** — TypeScript SDK for contract deploys and reads
+- **Vercel** — frontend + serverless cron endpoints
+- **Supabase** — Postgres read-mirror for fast frontend
+- **cron-job.org** — minute-level cron pings (Vercel free tier limits)
+- **Ably** — real-time score broadcasts
+- **football-data.org** — free live score API
+- **Vanilla HTML/CSS/JS** — no framework, no build step on the frontend
+- **OKX Wallet / MetaMask** — EIP-1193 wallet integration
 
-### If something fails midway
+---
 
-The script saves progress to `deploy_checkpoint.json` after every successful deploy. Just re-run `npm run deploy` and it picks up where it left off.
+## Roadmap
 
-### After completion
+- [x] 72 group-stage contracts deployed on Bradbury
+- [x] Live scores cron + Supabase mirror
+- [x] Resolution cron with two-phase LLM polling
+- [x] Frontend with predictions, My Picks, Leaderboard
+- [x] Custom domain at [predictwc.xyz](https://predictwc.xyz)
+- [ ] Knockout-round bracket population (auto-populates after June 27)
+- [ ] Real-time score updates via Ably (cron broadcasts already exist)
+- [ ] Tournament-end leaderboard rewards
 
-- Every match has a row in Supabase `matches` table with its contract address
-- Every match has a row in Supabase `pools` table with zero pools (ready for predictions)
-- `deploy_checkpoint.json` contains the full mapping locally too
+---
 
-## Troubleshooting
-
-- **"Module not found: genlayer-js/chains"**: Wrong package version. Try `npm install genlayer-js@latest`.
-- **"Invalid private key"**: Make sure `PRIVATE_KEY` starts with `0x` and is exactly 66 chars total.
-- **"insufficient balance"**: Account 1 doesn't have enough GEN. Check MetaMask, claim from faucet if needed.
-- **Deploys hang at "tx: 0x..."**: Network slow or stuck. The 10-minute retry should handle most cases. If a single deploy times out, the script logs it as failed and moves on — re-run to retry.
-- **"contract_address not in receipt"**: SDK return shape differs from expected. Run script with `node --inspect` and check what fields the receipt has. Tell me the receipt shape and I'll fix the extractor.
+Built by [@Afghanistan8](https://github.com/Afghanistan8) ([@Asuzu_a](https://twitter.com/Asuzu_a)).

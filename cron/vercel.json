@@ -1,0 +1,17 @@
+{
+  "crons": [
+    {
+      "path": "/api/live-scores",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/resolve-matches",
+      "schedule": "0 0 * * *"
+    }
+  ],
+  "functions": {
+    "api/resolve-matches.js": {
+      "maxDuration": 60
+    }
+  }
+}
