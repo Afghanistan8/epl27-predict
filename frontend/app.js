@@ -10,6 +10,7 @@ import {
   trySilentReconnect,
   hasMetaMask,
   shortAddress,
+  getDiscoveredWallets,
 } from './lib/wallet.js';
 import {
   sb,
@@ -88,9 +89,7 @@ subscribeWallet(async (state) => {
 walletBtn.addEventListener('click', async () => {
   const state = getWalletState();
   if (!state.address) {
-    if (!hasMetaMask()) { showToast('No wallet detected. Install OKX or MetaMask.', 'error'); return; }
-    try { await connectWallet(); showToast('Wallet connected'); }
-    catch (err) { showToast(err.message || 'Connect rejected', 'error'); }
+    openWalletChooser();
     return;
   }
   if (!state.isStudionet) {
@@ -101,6 +100,57 @@ walletBtn.addEventListener('click', async () => {
   const ok = confirm(`Disconnect ${currentUsername || shortAddress(state.address)}?`);
   if (ok) { disconnectWallet(); showToast('Disconnected'); }
 });
+
+// ─────────────────────────────────────────────────────────── WALLET CHOOSER
+
+const walletModal = document.getElementById('wallet-modal');
+const walletListEl = document.getElementById('wallet-list');
+const walletEmptyEl = document.getElementById('wallet-empty');
+
+function closeWalletChooser() { walletModal.hidden = true; }
+
+document.getElementById('wallet-modal-close')?.addEventListener('click', closeWalletChooser);
+walletModal?.addEventListener('click', (e) => { if (e.target === walletModal) closeWalletChooser(); });
+
+function openWalletChooser() {
+  const wallets = getDiscoveredWallets();
+  walletListEl.innerHTML = '';
+
+  if (wallets.length === 0) {
+    // No EIP-6963 wallets. Try the legacy single-injected path directly.
+    if (hasMetaMask()) {
+      walletEmptyEl.hidden = true;
+      connectChosen(null, 'your wallet');
+      return;
+    }
+    walletEmptyEl.hidden = false;
+    walletModal.hidden = false;
+    return;
+  }
+
+  walletEmptyEl.hidden = true;
+  wallets.forEach((w) => {
+    const btn = document.createElement('button');
+    btn.className = 'wallet-option';
+    btn.innerHTML = `
+      ${w.info?.icon ? `<img src="${w.info.icon}" alt="" class="wallet-option-icon" width="28" height="28">` : '<span class="wallet-option-icon"></span>'}
+      <span class="wallet-option-name">${w.info?.name || 'Wallet'}</span>
+    `;
+    btn.addEventListener('click', () => connectChosen(w, w.info?.name || 'wallet'));
+    walletListEl.appendChild(btn);
+  });
+  walletModal.hidden = false;
+}
+
+async function connectChosen(detail, label) {
+  closeWalletChooser();
+  try {
+    await connectWallet(detail);
+    showToast(`Connected ${label}`);
+  } catch (err) {
+    showToast(err.message || 'Connect rejected', 'error');
+  }
+}
 
 // ─────────────────────────────────────────────────────────── USERNAME MODAL
 

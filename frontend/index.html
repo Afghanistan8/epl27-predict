@@ -141,6 +141,20 @@
   </div>
 </footer>
 
+<!-- Wallet chooser modal (lists every installed wallet via EIP-6963) -->
+<div class="modal-backdrop" id="wallet-modal" hidden>
+  <div class="modal">
+    <button class="modal-close" id="wallet-modal-close" aria-label="Close">×</button>
+    <h2 class="modal-title">Connect a wallet</h2>
+    <p class="modal-lead">Choose which wallet to connect. You'll be asked to switch to the GenLayer Bradbury testnet.</p>
+    <div class="wallet-list" id="wallet-list"></div>
+    <p class="wallet-empty" id="wallet-empty" hidden>
+      No wallet detected. Install <a href="https://metamask.io/download/" target="_blank" rel="noopener">MetaMask</a>
+      or <a href="https://www.okx.com/web3" target="_blank" rel="noopener">OKX Wallet</a>, then refresh.
+    </p>
+  </div>
+</div>
+
 <!-- Username modal (shown on first wallet connect) -->
 <div class="modal-backdrop" id="username-modal" hidden>
   <div class="modal">

@@ -6,6 +6,7 @@
 import { createClient } from 'https://esm.sh/genlayer-js@latest';
 import { testnetBradbury } from 'https://esm.sh/genlayer-js@latest/chains';
 import { STUDIONET, MIN_STAKE_GEN } from './config.js';
+import { getActiveProvider } from './wallet.js';
 
 /* ---------- client ---------- */
 
@@ -16,13 +17,10 @@ function readClient() {
   return _readClient;
 }
 
-function getProvider() {
-  if (window.okxwallet) return window.okxwallet;
-  return window.ethereum;
-}
-
 async function writeClient() {
-  const provider = getProvider();
+  // Use the SAME wallet the user picked in the chooser, so writes are signed
+  // by the connected account (never a different injected wallet).
+  const provider = getActiveProvider();
   if (!provider) throw new Error('No wallet provider available.');
   const accounts = await provider.request({ method: 'eth_accounts' });
   const addr = accounts?.[0];

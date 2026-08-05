@@ -9,41 +9,48 @@
 
 import { STUDIONET } from './config.js';
 
-/* ---------- provider selection ---------- */
+/* ---------- provider discovery (EIP-6963) ---------- */
 
-// EIP-6963: wallets announce themselves; we collect them so multi-wallet
-// setups (MetaMask + OKX + Coinbase) don't fight over window.ethereum.
+// Wallets announce themselves per EIP-6963. We collect them (deduped by rdns)
+// so the user can pick which one to use instead of us guessing.
 const announced = [];
 if (typeof window !== 'undefined') {
   window.addEventListener('eip6963:announceProvider', (event) => {
-    if (event.detail?.provider && !announced.some((a) => a.provider === event.detail.provider)) {
-      announced.push(event.detail);
-    }
+    const detail = event.detail;
+    if (!detail?.provider) return;
+    const rdns = detail.info?.rdns;
+    const dup = announced.some((a) => (rdns ? a.info?.rdns === rdns : a.provider === detail.provider));
+    if (!dup) announced.push(detail);
   });
   window.dispatchEvent(new Event('eip6963:requestProvider'));
 }
 
-function getProvider() {
+/* The wallet the user actually chose. All reads/writes use this exact provider
+ * so a multi-wallet setup never sends a tx from the wrong account. */
+let activeProvider = null;
+
+// Returns the list of discovered wallets: [{ info: {name, icon, rdns}, provider }]
+export function getDiscoveredWallets() {
+  return announced.slice();
+}
+
+// Fallback provider when EIP-6963 found nothing (single legacy injected wallet).
+function legacyProvider() {
   if (typeof window === 'undefined') return null;
-  // OKX exposes a dedicated global — prefer it to avoid window.ethereum conflicts.
   if (window.okxwallet) return window.okxwallet;
-  // EIP-6963 discovered provider (prefer MetaMask if several announced).
-  if (announced.length) {
-    const mm = announced.find((a) => /metamask/i.test(a.info?.name || ''));
-    return (mm || announced[0]).provider;
-  }
-  // Legacy: multiple injected wallets multiplex behind window.ethereum.providers.
   if (window.ethereum?.providers?.length) {
-    return (
-      window.ethereum.providers.find((p) => p.isMetaMask) ||
-      window.ethereum.providers[0]
-    );
+    return window.ethereum.providers.find((p) => p.isMetaMask) || window.ethereum.providers[0];
   }
   return window.ethereum || null;
 }
 
+// The provider to use for the current session (chosen > legacy fallback).
+export function getActiveProvider() {
+  return activeProvider || legacyProvider();
+}
+
 export function hasMetaMask() {
-  return getProvider() !== null;
+  return announced.length > 0 || legacyProvider() !== null;
 }
 
 /* ---------- internal state + subscribers ---------- */
@@ -75,11 +82,17 @@ export function getState() { return state; }
 
 /* ---------- connect / disconnect ---------- */
 
-export async function connect() {
-  const provider = getProvider();
+// Connect using a specific discovered wallet (from the chooser). Pass the
+// EIP-6963 `detail` object, or nothing to use the legacy single-wallet path.
+export async function connect(detail) {
+  const provider = detail?.provider || getActiveProvider();
   if (!provider) {
-    throw new Error('No wallet detected. Install OKX Wallet or MetaMask and refresh.');
+    throw new Error('No wallet detected. Install MetaMask, OKX, or another wallet and refresh.');
   }
+  activeProvider = provider;
+  if (detail?.info?.rdns) localStorage.setItem('epl-wallet-rdns', detail.info.rdns);
+  attachListeners(provider);
+
   const accounts = await provider.request({ method: 'eth_requestAccounts' });
   const chainId = await provider.request({ method: 'eth_chainId' });
   setState({ address: accounts[0]?.toLowerCase() ?? null, chainId });
@@ -91,13 +104,15 @@ export async function connect() {
 }
 
 export function disconnect() {
+  activeProvider = null;
+  localStorage.removeItem('epl-wallet-rdns');
   setState({ address: null, chainId: null });
 }
 
 /* ---------- studionet switching ---------- */
 
 export async function switchToStudionet() {
-  const provider = getProvider();
+  const provider = getActiveProvider();
   if (!provider) throw new Error('No wallet available.');
   try {
     await provider.request({
@@ -126,27 +141,35 @@ export async function switchToStudionet() {
 
 /* ---------- provider event listeners ---------- */
 
-(function attachListeners() {
-  const provider = getProvider();
-  if (!provider?.on) return;
+let listenersAttachedTo = null;
+function attachListeners(provider) {
+  if (!provider?.on || listenersAttachedTo === provider) return;
+  listenersAttachedTo = provider;
   provider.on('accountsChanged', (accounts) => {
     setState({ address: accounts[0]?.toLowerCase() ?? null });
   });
   provider.on('chainChanged', (chainId) => {
     setState({ chainId });
   });
-})();
+}
 
 /* ---------- silent reconnect on page load ---------- */
 
 export async function trySilentReconnect() {
-  const provider = getProvider();
-  if (!provider) return;
   const stored = localStorage.getItem('epl-last-address');
   if (!stored) return;
+
+  // Prefer the same wallet the user chose last time (by rdns).
+  const rdns = localStorage.getItem('epl-wallet-rdns');
+  const chosen = rdns ? announced.find((a) => a.info?.rdns === rdns) : null;
+  const provider = chosen?.provider || getActiveProvider();
+  if (!provider) return;
+
   try {
     const accounts = await provider.request({ method: 'eth_accounts' });
     if (accounts?.[0]) {
+      activeProvider = provider;
+      attachListeners(provider);
       const chainId = await provider.request({ method: 'eth_chainId' });
       setState({ address: accounts[0].toLowerCase(), chainId });
     }
