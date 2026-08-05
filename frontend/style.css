@@ -1,5 +1,5 @@
 /* ============================================================
-   WC '26 PREDICT — DESIGN TOKENS & THEME SYSTEM
+   EPL '27 PREDICT — DESIGN TOKENS & THEME SYSTEM
    ============================================================ */
 
 :root {
@@ -33,43 +33,43 @@
   --dur: 240ms;
   --dur-slow: 420ms;
 
-  /* Color (accent stays constant across themes) */
-  --accent: hsl(140 65% 50%);
-  --accent-deep: hsl(140 65% 40%);
-  --accent-soft: hsl(140 65% 50% / 0.12);
+  /* Color (accent stays constant across themes) — Premier League magenta */
+  --accent: hsl(330 85% 55%);
+  --accent-deep: hsl(330 85% 45%);
+  --accent-soft: hsl(330 85% 55% / 0.13);
   --live: hsl(0 75% 60%);
   --live-soft: hsl(0 75% 60% / 0.15);
 }
 
-/* DARK theme (default) */
+/* DARK theme (default) — deep Premier League purple */
 :root,
 [data-theme="dark"] {
-  --bg: hsl(28 12% 7%);
-  --bg-elevated: hsl(30 10% 10%);
-  --bg-card: hsl(32 9% 11%);
-  --bg-input: hsl(30 8% 14%);
-  --fg: hsl(40 18% 94%);
-  --fg-muted: hsl(35 10% 65%);
-  --fg-dim: hsl(35 8% 45%);
-  --border: hsl(30 10% 18%);
-  --border-strong: hsl(30 10% 26%);
-  --shadow-card: 0 1px 0 hsl(30 10% 18%), 0 12px 24px -12px hsl(0 0% 0% / 0.4);
+  --bg: hsl(280 24% 7%);
+  --bg-elevated: hsl(280 20% 10%);
+  --bg-card: hsl(280 18% 12%);
+  --bg-input: hsl(280 16% 15%);
+  --fg: hsl(280 20% 95%);
+  --fg-muted: hsl(280 10% 66%);
+  --fg-dim: hsl(280 8% 46%);
+  --border: hsl(280 14% 19%);
+  --border-strong: hsl(280 14% 28%);
+  --shadow-card: 0 1px 0 hsl(280 14% 18%), 0 12px 24px -12px hsl(280 40% 3% / 0.5);
   --selection-bg: var(--accent-soft);
   --selection-fg: var(--accent);
 }
 
-/* LIGHT theme */
+/* LIGHT theme — cool lavender neutrals */
 [data-theme="light"] {
-  --bg: hsl(40 28% 96%);
-  --bg-elevated: hsl(38 22% 98%);
-  --bg-card: hsl(40 30% 99%);
-  --bg-input: hsl(40 20% 94%);
-  --fg: hsl(28 22% 12%);
-  --fg-muted: hsl(28 10% 38%);
-  --fg-dim: hsl(28 8% 55%);
-  --border: hsl(35 18% 86%);
-  --border-strong: hsl(35 16% 72%);
-  --shadow-card: 0 1px 0 hsl(35 18% 86%), 0 8px 18px -10px hsl(28 22% 12% / 0.12);
+  --bg: hsl(280 30% 97%);
+  --bg-elevated: hsl(280 24% 99%);
+  --bg-card: hsl(0 0% 100%);
+  --bg-input: hsl(280 20% 95%);
+  --fg: hsl(285 30% 12%);
+  --fg-muted: hsl(285 10% 38%);
+  --fg-dim: hsl(285 8% 55%);
+  --border: hsl(285 18% 88%);
+  --border-strong: hsl(285 16% 74%);
+  --shadow-card: 0 1px 0 hsl(285 18% 88%), 0 8px 18px -10px hsl(285 30% 12% / 0.12);
   --selection-bg: var(--accent-soft);
   --selection-fg: var(--accent-deep);
 }
@@ -1178,22 +1178,40 @@ main {
 
 
 /* ============================================================
-   FLAGS
+   CRESTS
    ============================================================ */
 
-/* Match card team flags */
-.team-flag {
+/* Shared: club crests render square. Monogram fallback keeps layout stable. */
+.team-crest,
+.match-detail-crest,
+.pick-crest,
+.my-pick-crest,
+.crest-fallback {
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.crest-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-input);
+  color: var(--fg-muted);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--border);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* Match card team crests */
+.team-crest {
   width: 28px;
-  height: auto;
+  height: 28px;
   display: inline-block;
   vertical-align: middle;
   margin-right: var(--sp-3);
-  border-radius: 3px;
-  box-shadow: 0 0 0 1px var(--border);
-  flex-shrink: 0;
-  object-fit: cover;
-  aspect-ratio: 3 / 2;
 }
+span.team-crest { font-size: 11px; }
 
 .match-team {
   display: flex !important;
@@ -1207,29 +1225,23 @@ main {
   margin-left: auto;
 }
 
-/* Match detail page — big flags above team names */
-.match-detail-flag {
+/* Match detail page — big crests above team names */
+.match-detail-crest {
   display: block;
-  width: 80px;
-  height: auto;
+  width: 72px;
+  height: 72px;
   margin: 0 auto var(--sp-4);
-  border-radius: 4px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18), 0 0 0 1px var(--border);
-  object-fit: cover;
-  aspect-ratio: 3 / 2;
 }
+span.match-detail-crest { font-size: 24px; margin-bottom: var(--sp-4); }
 
-/* Pick button flags — centered */
-.pick-flag {
-  width: 44px;
-  height: auto;
+/* Pick button crests — centered */
+.pick-crest {
+  width: 40px;
+  height: 40px;
   margin: 0 auto var(--sp-2);
   display: block;
-  border-radius: 3px;
-  box-shadow: 0 0 0 1px var(--border);
-  object-fit: cover;
-  aspect-ratio: 3 / 2;
 }
+span.pick-crest { font-size: 15px; }
 .pick-draw-icon {
   display: block;
   font-size: 28px;
@@ -1241,22 +1253,18 @@ main {
   filter: grayscale(1);
 }
 
-/* My picks card flags */
+/* My picks card crests */
 .my-pick-teams {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
   flex-wrap: wrap;
 }
-.my-pick-flag {
-  width: 28px;
-  height: auto;
-  border-radius: 3px;
-  box-shadow: 0 0 0 1px var(--border);
-  flex-shrink: 0;
-  object-fit: cover;
-  aspect-ratio: 3 / 2;
+.my-pick-crest {
+  width: 26px;
+  height: 26px;
 }
+span.my-pick-crest { font-size: 10px; }
 .my-pick-vs {
   color: var(--fg-muted);
   font-family: var(--font-display);
@@ -1265,12 +1273,12 @@ main {
   padding: 0 var(--sp-1);
 }
 
-/* On small screens, shrink flags slightly */
+/* On small screens, shrink crests slightly */
 @media (max-width: 540px) {
-  .team-flag { width: 22px; }
-  .match-detail-flag { width: 60px; }
-  .pick-flag { width: 36px; }
-  .my-pick-flag { width: 24px; }
+  .team-crest { width: 24px; height: 24px; }
+  .match-detail-crest { width: 56px; height: 56px; }
+  .pick-crest { width: 36px; height: 36px; }
+  .my-pick-crest { width: 22px; height: 22px; }
 }
 
 /* ============================================================
@@ -1309,4 +1317,180 @@ main {
     font-size: 12px;
     gap: var(--sp-1);
   }
+}
+
+/* ============================================================
+   AI CALL — badge (match card) + panel (match detail)
+   ============================================================ */
+
+.ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 3px 8px 3px 3px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  border: 1px solid hsl(330 85% 55% / 0.35);
+  font-size: 12px;
+  line-height: 1;
+  color: var(--fg);
+  max-width: 100%;
+}
+.ai-badge-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: white;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.03em;
+}
+.ai-badge-pick {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ai-badge-conf {
+  color: var(--fg-muted);
+  font-size: 11px;
+  text-transform: capitalize;
+}
+.match-card-ai {
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+}
+
+/* Match-detail AI call panel */
+.ai-call-panel {
+  margin-top: var(--sp-6);
+  padding: var(--sp-4) var(--sp-6);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, var(--accent-soft), transparent);
+  border: 1px solid hsl(330 85% 55% / 0.3);
+}
+.ai-call-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.ai-call-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: white;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 12px;
+}
+.ai-call-pick {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  margin-top: var(--sp-2);
+}
+.ai-call-reason {
+  font-style: italic;
+  color: var(--fg-muted);
+  margin: var(--sp-1) 0 var(--sp-2);
+}
+.ai-call-foot {
+  font-size: 12px;
+  color: var(--fg-dim);
+  margin: 0;
+}
+
+/* ============================================================
+   STANDINGS — Premier League table
+   ============================================================ */
+
+.standings-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+}
+.standings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  min-width: 640px;
+}
+.standings-table thead th {
+  text-align: right;
+  padding: var(--sp-3) var(--sp-2);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--fg-muted);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg-elevated);
+}
+.standings-table th.col-pos,
+.standings-table td.col-pos { text-align: center; width: 34px; color: var(--fg-muted); }
+.standings-table th.col-team,
+.standings-table td.col-team { text-align: left; }
+.standings-table th.col-pts,
+.standings-table td.col-pts { text-align: right; font-weight: 700; padding-right: var(--sp-4); }
+.standings-table th.col-form { text-align: left; padding-left: var(--sp-4); }
+
+.standings-table tbody td {
+  padding: var(--sp-3) var(--sp-2);
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+.standings-table tbody tr:last-child td { border-bottom: 0; }
+.standings-table tbody tr:hover { background: var(--accent-soft); }
+
+.col-team {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.standings-crest { flex-shrink: 0; object-fit: contain; }
+.standings-name { font-weight: 600; }
+.standings-short { display: none; }
+.gd-pos { color: var(--accent); }
+.gd-neg { color: var(--fg-muted); }
+
+.col-form { display: flex; gap: 4px; padding-left: var(--sp-4); }
+.form-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: white;
+}
+.form-w { background: hsl(140 60% 42%); }
+.form-l { background: hsl(0 70% 55%); }
+.form-d { background: var(--fg-dim); }
+
+.standings-foot {
+  padding: var(--sp-3) var(--sp-4);
+  margin: 0;
+  font-size: 12px;
+  color: var(--fg-dim);
+}
+
+@media (max-width: 640px) {
+  .standings-name { display: none; }
+  .standings-short { display: inline; font-weight: 600; }
 }

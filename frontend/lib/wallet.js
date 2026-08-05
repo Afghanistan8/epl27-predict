@@ -11,10 +11,34 @@ import { STUDIONET } from './config.js';
 
 /* ---------- provider selection ---------- */
 
+// EIP-6963: wallets announce themselves; we collect them so multi-wallet
+// setups (MetaMask + OKX + Coinbase) don't fight over window.ethereum.
+const announced = [];
+if (typeof window !== 'undefined') {
+  window.addEventListener('eip6963:announceProvider', (event) => {
+    if (event.detail?.provider && !announced.some((a) => a.provider === event.detail.provider)) {
+      announced.push(event.detail);
+    }
+  });
+  window.dispatchEvent(new Event('eip6963:requestProvider'));
+}
+
 function getProvider() {
   if (typeof window === 'undefined') return null;
-  // OKX exposes itself on a dedicated global — prefer it to avoid window.ethereum conflicts.
+  // OKX exposes a dedicated global — prefer it to avoid window.ethereum conflicts.
   if (window.okxwallet) return window.okxwallet;
+  // EIP-6963 discovered provider (prefer MetaMask if several announced).
+  if (announced.length) {
+    const mm = announced.find((a) => /metamask/i.test(a.info?.name || ''));
+    return (mm || announced[0]).provider;
+  }
+  // Legacy: multiple injected wallets multiplex behind window.ethereum.providers.
+  if (window.ethereum?.providers?.length) {
+    return (
+      window.ethereum.providers.find((p) => p.isMetaMask) ||
+      window.ethereum.providers[0]
+    );
+  }
   return window.ethereum || null;
 }
 
@@ -42,8 +66,8 @@ function setState(patch) {
   state = { ...state, ...patch };
   state.isStudionet =
     (state.chainId || '').toLowerCase() === STUDIONET.chainId.toLowerCase();
-  if (state.address) localStorage.setItem('wc-last-address', state.address);
-  else localStorage.removeItem('wc-last-address');
+  if (state.address) localStorage.setItem('epl-last-address', state.address);
+  else localStorage.removeItem('epl-last-address');
   subs.forEach((cb) => cb(state));
 }
 
@@ -118,7 +142,7 @@ export async function switchToStudionet() {
 export async function trySilentReconnect() {
   const provider = getProvider();
   if (!provider) return;
-  const stored = localStorage.getItem('wc-last-address');
+  const stored = localStorage.getItem('epl-last-address');
   if (!stored) return;
   try {
     const accounts = await provider.request({ method: 'eth_accounts' });

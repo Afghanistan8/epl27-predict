@@ -126,7 +126,7 @@ class PredictionMarket(gl.Contract):
             web_data = gl.nondet.web.render(resolution_url, mode="text")
 
             task = f"""
-In the following web page, find the final score of the match between:
+In the following web page, find the final score of the Premier League match between:
 Team 1 (home): {team1}
 Team 2 (away): {team2}
 
@@ -134,17 +134,17 @@ Web page content:
 {web_data}
 End of web page data.
 
-Use the result at the end of 90 minutes regulation time only.
-For knockout matches that went to extra time or penalties, still use the
-score at end of 90 minutes regulation.
+This is a Premier League fixture — a single 90-minute match with no extra
+time or penalties. Use the full-time score after 90 minutes (plus stoppage
+time) of regulation.
 
 If it says "Kick off [time]" between the team names, the match hasn't started.
 If you cannot find the final score, assume the match is not yet resolved.
 
 Respond ONLY with the following JSON format, nothing else:
 {{
-    "score": str,    // The final score, e.g. "2:1", or "-" if not resolved
-    "winner": int    // 1 if {team1} won, 2 if {team2} won, 0 for draw, -1 if not resolved
+    "score": str,    // The final score as home:away, e.g. "2:1", or "-" if not resolved
+    "winner": int    // 1 if {team1} (home) won, 2 if {team2} (away) won, 0 for draw, -1 if not resolved
 }}
 Your response must be parseable JSON with no prefix or suffix.
 """

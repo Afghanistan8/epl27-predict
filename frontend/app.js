@@ -1,4 +1,4 @@
-/* WC '26 Predict — main entrypoint */
+/* EPL '27 Predict — main entrypoint */
 
 import { showToast, attachAsyncSubmit } from './lib/ui.js';
 import {
@@ -20,6 +20,9 @@ import {
   getMatch,
   getMyPredictions,
   getLeaderboard,
+  getStandings,
+  getAIPredictionsMap,
+  getAIPrediction,
 } from './lib/supabase.js';
 import {
   readPools,
@@ -32,17 +35,17 @@ import {
   formatGen,
 } from './lib/contract.js';
 import { MIN_STAKE_GEN } from './lib/config.js';
-import { flagImg } from './lib/flags.js';
+import { crestImg } from './lib/crests.js';
 
 // ─────────────────────────────────────────────────────────── THEME
 
 const root = document.documentElement;
 function applyTheme(theme) {
   root.setAttribute('data-theme', theme);
-  localStorage.setItem('wc-theme', theme);
+  localStorage.setItem('epl-theme', theme);
 }
 (function initTheme() {
-  const saved = localStorage.getItem('wc-theme');
+  const saved = localStorage.getItem('epl-theme');
   if (saved) applyTheme(saved);
   else if (window.matchMedia?.('(prefers-color-scheme: light)').matches) applyTheme('light');
 })();
@@ -126,7 +129,7 @@ attachAsyncSubmit(usernameForm, async () => {
 
 // ─────────────────────────────────────────────────────────── ROUTER
 
-const routes = ['home', 'match', 'me', 'leaderboard'];
+const routes = ['home', 'match', 'me', 'leaderboard', 'table'];
 function parseRoute() {
   const hash = window.location.hash.slice(1) || '/';
   const parts = hash.split('/').filter(Boolean);
@@ -134,6 +137,7 @@ function parseRoute() {
   if (parts[0] === 'match' && parts[1]) return { name: 'match', params: { id: parts[1] } };
   if (parts[0] === 'me') return { name: 'me', params: {} };
   if (parts[0] === 'leaderboard') return { name: 'leaderboard', params: {} };
+  if (parts[0] === 'table') return { name: 'table', params: {} };
   return { name: 'home', params: {} };
 }
 function render() {
@@ -150,18 +154,26 @@ function render() {
   if (route.name === 'match') renderMatchDetail(route.params.id);
   if (route.name === 'me') renderMyPicks();
   if (route.name === 'leaderboard') renderLeaderboard();
+  if (route.name === 'table') renderTable();
 }
 window.addEventListener('hashchange', render);
 
 // ─────────────────────────────────────────────────────────── HOME
 
 let cachedMatches = null;
+let cachedAIPreds = {};
 let currentFilter = 'upcoming';
 
 async function loadMatches() {
   try { cachedMatches = await getMatches(); }
   catch (e) { console.error(e); cachedMatches = []; showToast("Couldn't load matches", 'error'); }
   return cachedMatches;
+}
+
+async function loadAIPreds() {
+  try { cachedAIPreds = await getAIPredictionsMap(); }
+  catch (e) { console.warn('AI preds load failed:', e.message); cachedAIPreds = {}; }
+  return cachedAIPreds;
 }
 
 function filterMatches(matches, filter) {
@@ -179,6 +191,7 @@ function filterMatches(matches, filter) {
 
 async function renderHome() {
   if (!cachedMatches) await loadMatches();
+  await loadAIPreds();
   const matches = cachedMatches || [];
   document.getElementById('stat-matches').textContent = matches.length || '—';
   // Get total predictions from supabase
@@ -196,11 +209,25 @@ async function renderHome() {
   list.innerHTML = filtered.map(matchCardHtml).join('');
 }
 
+// Small inline badge showing GenLayer's own pre-match call.
+function aiBadgeHtml(m, { compact = false } = {}) {
+  const ai = cachedAIPreds[m.match_id];
+  if (!ai || !ai.pick) return '';
+  const pickTeam = ai.pick === 'home' ? m.home : ai.pick === 'away' ? m.away : 'Draw';
+  const conf = ai.confidence ? `<span class="ai-badge-conf">${ai.confidence}</span>` : '';
+  return `
+    <span class="ai-badge" data-pick="${ai.pick}" title="${ai.reason ? ai.reason.replace(/"/g, '&quot;') : 'GenLayer AI call'}">
+      <span class="ai-badge-mark">AI</span>
+      <span class="ai-badge-pick">${pickTeam}</span>
+      ${compact ? '' : conf}
+    </span>`;
+}
+
 function matchCardHtml(m) {
   const date = new Date(m.kickoff_ts * 1000);
   const dateLabel = date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   const timeLabel = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-  const stageLabel = m.group_letter ? `Group ${m.group_letter}` : (m.stage || 'WC 26');
+  const stageLabel = m.matchday ? `Matchday ${m.matchday}` : 'EPL 26/27';
   const homeScore = m.live_score_home ?? '—';
   const awayScore = m.live_score_away ?? '—';
   return `
@@ -210,9 +237,10 @@ function matchCardHtml(m) {
         <span class="match-time">${dateLabel} · ${timeLabel}</span>
       </div>
       <div class="match-teams">
-        <div class="match-team">${flagImg(m.home, 40, 'team-flag')}<span class="team-name">${m.home}</span><span class="team-score">${m.status === 'scheduled' ? '—' : homeScore}</span></div>
-        <div class="match-team">${flagImg(m.away, 40, 'team-flag')}<span class="team-name">${m.away}</span><span class="team-score">${m.status === 'scheduled' ? '—' : awayScore}</span></div>
+        <div class="match-team">${crestImg(m.home, 40, 'team-crest')}<span class="team-name">${m.home}</span><span class="team-score">${m.status === 'scheduled' ? '—' : homeScore}</span></div>
+        <div class="match-team">${crestImg(m.away, 40, 'team-crest')}<span class="team-name">${m.away}</span><span class="team-score">${m.status === 'scheduled' ? '—' : awayScore}</span></div>
       </div>
+      ${aiBadgeHtml(m, { compact: true }) ? `<div class="match-card-ai">${aiBadgeHtml(m, { compact: true })}</div>` : ''}
     </a>
   `;
 }
@@ -283,6 +311,12 @@ async function renderMatchDetail(matchId) {
     currentPools = { home: 0n, draw: 0n, away: 0n, total: 0n };
   }
 
+  // AI Call for this fixture (from Supabase mirror; may be null pre-kickoff).
+  try {
+    const ai = await getAIPrediction(matchId);
+    if (ai) cachedAIPreds[matchId] = ai;
+  } catch (e) { console.warn('AI pred read failed:', e.message); }
+
   // Read my prediction from Supabase (not from contract — contract read fails)
   const state = getWalletState();
   myPrediction = null;
@@ -294,11 +328,28 @@ async function renderMatchDetail(matchId) {
   attachMatchDetailEvents();
 }
 
+function aiCallPanelHtml(m) {
+  const ai = cachedAIPreds[m.match_id];
+  if (!ai || !ai.pick) return '';
+  const pickTeam = ai.pick === 'home' ? m.home : ai.pick === 'away' ? m.away : 'Draw';
+  return `
+    <div class="ai-call-panel" data-pick="${ai.pick}">
+      <div class="ai-call-head">
+        <span class="ai-call-mark">AI</span>
+        <p class="eyebrow" style="margin:0;">GenLayer's call</p>
+        ${ai.confidence ? `<span class="ai-badge-conf">${ai.confidence} confidence</span>` : ''}
+      </div>
+      <div class="ai-call-pick">${pickTeam}</div>
+      ${ai.reason ? `<p class="ai-call-reason">"${ai.reason}"</p>` : ''}
+      <p class="ai-call-foot">The validators' own pre-match forecast, reached by consensus on-chain — separate from the crowd's pools below.</p>
+    </div>`;
+}
+
 function matchDetailHtml(m, pools, mine, state) {
   const date = new Date(m.kickoff_ts * 1000);
   const dateLabel = date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
   const timeLabel = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
-  const stageLabel = m.group_letter ? `Group ${m.group_letter}` : (m.stage || '');
+  const stageLabel = m.matchday ? `Matchday ${m.matchday}` : 'EPL 26/27';
 
   const total = Number(pools.total) || 0;
   const isResolved = m.status === 'resolved' || m.status === 'finished';
@@ -321,17 +372,19 @@ function matchDetailHtml(m, pools, mine, state) {
         <p class="eyebrow">${stageLabel}</p>
         <div class="match-detail-teams">
           <div class="match-detail-team">
-            ${flagImg(m.home, 160, 'match-detail-flag')}
+            ${crestImg(m.home, 120, 'match-detail-crest')}
             <h2 class="match-detail-team-name">${m.home}</h2>
           </div>
           ${liveScore || '<span class="match-detail-vs">vs</span>'}
           <div class="match-detail-team">
-            ${flagImg(m.away, 160, 'match-detail-flag')}
+            ${crestImg(m.away, 120, 'match-detail-crest')}
             <h2 class="match-detail-team-name">${m.away}</h2>
           </div>
         </div>
         <div class="match-detail-meta">${statusBadge}</div>
       </div>
+
+      ${aiCallPanelHtml(m)}
 
       ${mine ? renderMyPredictionPanel(mine, m) : ''}
 
@@ -415,7 +468,7 @@ function renderPredictForm(m, pools, state) {
       <p class="eyebrow">Make your pick</p>
       <div class="pick-buttons">
         <button class="pick-button" data-pick="home">
-          ${flagImg(m.home, 40, 'pick-flag')}
+          ${crestImg(m.home, 40, 'pick-crest')}
           <span class="pick-button-label">${m.home}</span>
           <span class="pick-button-meta">Home</span>
         </button>
@@ -425,7 +478,7 @@ function renderPredictForm(m, pools, state) {
           <span class="pick-button-meta">—</span>
         </button>
         <button class="pick-button" data-pick="away">
-          ${flagImg(m.away, 40, 'pick-flag')}
+          ${crestImg(m.away, 40, 'pick-crest')}
           <span class="pick-button-label">${m.away}</span>
           <span class="pick-button-meta">Away</span>
         </button>
@@ -567,7 +620,7 @@ async function renderMyPicks() {
   try {
     const { data, error } = await sb
       .from('predictions')
-      .select('*, matches(home, away, kickoff_ts, status, result, group_letter, stage)')
+      .select('*, matches(home, away, kickoff_ts, status, result, matchday)')
       .ilike('user_address', state.address)
       .order('submitted_at', { ascending: false });
 
@@ -639,7 +692,7 @@ function myPickCardHtml(p) {
   const m = p.matches || {};
   const date = new Date((m.kickoff_ts || 0) * 1000);
   const dateLabel = date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-  const stageLabel = m.group_letter ? `Group ${m.group_letter}` : (m.stage || 'WC 26');
+  const stageLabel = m.matchday ? `Matchday ${m.matchday}` : 'EPL 26/27';
   const isResolved = m.status === 'resolved' || m.status === 'finished';
   const won = isResolved && m.result === p.pick;
   const lost = isResolved && m.result && m.result !== p.pick;
@@ -658,9 +711,9 @@ function myPickCardHtml(p) {
         <span class="my-pick-date">${dateLabel}</span>
       </div>
       <div class="my-pick-teams">
-        ${flagImg(m.home, 40, 'my-pick-flag')}<span>${m.home || '?'}</span>
+        ${crestImg(m.home, 40, 'my-pick-crest')}<span>${m.home || '?'}</span>
         <span class="my-pick-vs">vs</span>
-        ${flagImg(m.away, 40, 'my-pick-flag')}<span>${m.away || '?'}</span>
+        ${crestImg(m.away, 40, 'my-pick-crest')}<span>${m.away || '?'}</span>
       </div>
       <div class="my-pick-detail">
         <div>
@@ -772,6 +825,78 @@ async function renderLeaderboard() {
     console.error(e);
     el.innerHTML = `<div class="empty-state">Couldn't load leaderboard: ${e.message}</div>`;
   }
+}
+
+// ─────────────────────────────────────────────────────────── TABLE
+
+async function renderTable() {
+  const el = document.getElementById('table-list');
+  if (!el) return;
+  el.innerHTML = '<div class="empty-state">Loading table…</div>';
+
+  try {
+    const rows = await getStandings();
+    if (!rows.length) {
+      el.innerHTML = `<div class="empty-state">The Premier League table is empty — season hasn't started yet. Check back after 21 Aug 2026.</div>`;
+      return;
+    }
+    el.innerHTML = `
+      <div class="standings-wrap">
+        <table class="standings-table">
+          <thead>
+            <tr>
+              <th class="col-pos">#</th>
+              <th class="col-team">Club</th>
+              <th class="col-num" title="Played">P</th>
+              <th class="col-num" title="Won">W</th>
+              <th class="col-num" title="Drawn">D</th>
+              <th class="col-num" title="Lost">L</th>
+              <th class="col-num" title="Goals For">GF</th>
+              <th class="col-num" title="Goals Against">GA</th>
+              <th class="col-num" title="Goal Difference">GD</th>
+              <th class="col-pts" title="Points">Pts</th>
+              <th class="col-form" title="Last 5">Form</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(standingsRowHtml).join('')}
+          </tbody>
+        </table>
+        <p class="standings-foot">Via Premier League · Updated every ~3 hours</p>
+      </div>
+    `;
+  } catch (e) {
+    console.error(e);
+    el.innerHTML = `<div class="empty-state">Couldn't load table: ${e.message}</div>`;
+  }
+}
+
+function standingsRowHtml(r) {
+  const gd = r.goal_difference >= 0 ? `+${r.goal_difference}` : `${r.goal_difference}`;
+  const formDots = (r.form || '').split(',').filter(Boolean).slice(-5).map((f) => {
+    const cls = f === 'W' ? 'form-w' : f === 'L' ? 'form-l' : 'form-d';
+    return `<span class="form-dot ${cls}" title="${f === 'W' ? 'Win' : f === 'L' ? 'Loss' : 'Draw'}">${f}</span>`;
+  }).join('');
+
+  return `
+    <tr>
+      <td class="col-pos">${r.position}</td>
+      <td class="col-team">
+        ${r.crest ? `<img src="${r.crest}" alt="${r.team}" class="standings-crest" width="20" height="20" loading="lazy">` : ''}
+        <span class="standings-name">${r.team}</span>
+        <span class="standings-short">${r.short_name || ''}</span>
+      </td>
+      <td class="col-num">${r.played}</td>
+      <td class="col-num">${r.won}</td>
+      <td class="col-num">${r.draw}</td>
+      <td class="col-num">${r.lost}</td>
+      <td class="col-num">${r.goals_for}</td>
+      <td class="col-num">${r.goals_against}</td>
+      <td class="col-num ${r.goal_difference > 0 ? 'gd-pos' : r.goal_difference < 0 ? 'gd-neg' : ''}">${gd}</td>
+      <td class="col-pts">${r.points}</td>
+      <td class="col-form">${formDots}</td>
+    </tr>
+  `;
 }
 
 // ─────────────────────────────────────────────────────────── BOOT

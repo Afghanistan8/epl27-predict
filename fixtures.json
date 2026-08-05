@@ -1,722 +1,502 @@
 [
   {
-    "match_id": "wc2026_g_A01",
-    "home": "Mexico",
-    "away": "South Africa",
-    "kickoff_ts": 1781204400,
-    "group": "A",
-    "matchday": 1,
-    "venue": "Mexico City",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_A02",
-    "home": "South Korea",
-    "away": "Czechia",
-    "kickoff_ts": 1781226000,
-    "group": "A",
-    "matchday": 1,
-    "venue": "Guadalajara",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_B01",
-    "home": "Canada",
-    "away": "Bosnia-Herzegovina",
-    "kickoff_ts": 1781290800,
-    "group": "B",
-    "matchday": 1,
-    "venue": "Toronto",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_D01",
-    "home": "United States",
-    "away": "Paraguay",
-    "kickoff_ts": 1781312400,
-    "group": "D",
-    "matchday": 1,
-    "venue": "Los Angeles",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_D02",
-    "home": "Australia",
-    "away": "Turkey",
-    "kickoff_ts": 1781323200,
-    "group": "D",
-    "matchday": 1,
-    "venue": "Vancouver",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_B02",
-    "home": "Qatar",
-    "away": "Switzerland",
-    "kickoff_ts": 1781377200,
-    "group": "B",
-    "matchday": 1,
-    "venue": "San Francisco Bay Area",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_C01",
-    "home": "Brazil",
-    "away": "Morocco",
-    "kickoff_ts": 1781388000,
-    "group": "C",
-    "matchday": 1,
-    "venue": "New York/New Jersey",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_C02",
-    "home": "Haiti",
-    "away": "Scotland",
-    "kickoff_ts": 1781398800,
-    "group": "C",
-    "matchday": 1,
-    "venue": "Boston",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_E01",
-    "home": "Germany",
-    "away": "Curacao",
-    "kickoff_ts": 1781456400,
-    "group": "E",
-    "matchday": 1,
-    "venue": "Houston",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_F01",
-    "home": "Netherlands",
-    "away": "Japan",
-    "kickoff_ts": 1781467200,
-    "group": "F",
-    "matchday": 1,
-    "venue": "Dallas",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_E02",
-    "home": "Ivory Coast",
-    "away": "Ecuador",
-    "kickoff_ts": 1781478000,
-    "group": "E",
-    "matchday": 1,
-    "venue": "Philadelphia",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_F02",
-    "home": "Sweden",
-    "away": "Tunisia",
-    "kickoff_ts": 1781485200,
-    "group": "F",
-    "matchday": 1,
-    "venue": "Monterrey",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_H01",
-    "home": "Spain",
-    "away": "Cape Verde",
-    "kickoff_ts": 1781539200,
-    "group": "H",
-    "matchday": 1,
-    "venue": "Atlanta",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_G01",
-    "home": "Belgium",
-    "away": "Egypt",
-    "kickoff_ts": 1781550000,
-    "group": "G",
-    "matchday": 1,
-    "venue": "Seattle",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_H02",
-    "home": "Saudi Arabia",
-    "away": "Uruguay",
-    "kickoff_ts": 1781560800,
-    "group": "H",
-    "matchday": 1,
-    "venue": "Miami",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_G02",
-    "home": "Iran",
-    "away": "New Zealand",
-    "kickoff_ts": 1781571600,
-    "group": "G",
-    "matchday": 1,
-    "venue": "Los Angeles",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_I01",
-    "home": "France",
-    "away": "Senegal",
-    "kickoff_ts": 1781636400,
-    "group": "I",
-    "matchday": 1,
-    "venue": "New York/New Jersey",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_I02",
-    "home": "Iraq",
-    "away": "Norway",
-    "kickoff_ts": 1781647200,
-    "group": "I",
-    "matchday": 1,
-    "venue": "Boston",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_J01",
-    "home": "Argentina",
-    "away": "Algeria",
-    "kickoff_ts": 1781658000,
-    "group": "J",
-    "matchday": 1,
-    "venue": "Kansas City",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_J02",
-    "home": "Austria",
-    "away": "Jordan",
-    "kickoff_ts": 1781668800,
-    "group": "J",
-    "matchday": 1,
-    "venue": "San Francisco Bay Area",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_K01",
-    "home": "Portugal",
-    "away": "DR Congo",
-    "kickoff_ts": 1781715600,
-    "group": "K",
-    "matchday": 1,
-    "venue": "Houston",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_L01",
-    "home": "England",
-    "away": "Croatia",
-    "kickoff_ts": 1781726400,
-    "group": "L",
-    "matchday": 1,
-    "venue": "Dallas",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_L02",
-    "home": "Ghana",
-    "away": "Panama",
-    "kickoff_ts": 1781737200,
-    "group": "L",
-    "matchday": 1,
-    "venue": "Toronto",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_K02",
-    "home": "Uzbekistan",
-    "away": "Colombia",
-    "kickoff_ts": 1781748000,
-    "group": "K",
-    "matchday": 1,
-    "venue": "Mexico City",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_A03",
-    "home": "Czechia",
-    "away": "South Africa",
-    "kickoff_ts": 1781798400,
-    "group": "A",
-    "matchday": 2,
-    "venue": "Atlanta",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_B03",
-    "home": "Switzerland",
-    "away": "Bosnia-Herzegovina",
-    "kickoff_ts": 1781809200,
-    "group": "B",
-    "matchday": 2,
-    "venue": "Los Angeles",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_A04",
-    "home": "Mexico",
-    "away": "South Korea",
-    "kickoff_ts": 1781830800,
-    "group": "A",
-    "matchday": 2,
-    "venue": "Guadalajara",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_B04",
-    "home": "Canada",
-    "away": "Qatar",
-    "kickoff_ts": 1781830800,
-    "group": "B",
-    "matchday": 2,
-    "venue": "Vancouver",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_D03",
-    "home": "United States",
-    "away": "Australia",
-    "kickoff_ts": 1781895600,
-    "group": "D",
-    "matchday": 2,
-    "venue": "Seattle",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_C03",
-    "home": "Scotland",
-    "away": "Morocco",
-    "kickoff_ts": 1781906400,
-    "group": "C",
-    "matchday": 2,
-    "venue": "Boston",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_C04",
-    "home": "Brazil",
-    "away": "Haiti",
-    "kickoff_ts": 1781917200,
-    "group": "C",
-    "matchday": 2,
-    "venue": "Philadelphia",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_D04",
-    "home": "Turkey",
-    "away": "Paraguay",
-    "kickoff_ts": 1781917200,
-    "group": "D",
-    "matchday": 2,
-    "venue": "San Francisco Bay Area",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_F03",
-    "home": "Netherlands",
-    "away": "Sweden",
-    "kickoff_ts": 1781974800,
-    "group": "F",
-    "matchday": 2,
-    "venue": "Houston",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_E03",
-    "home": "Germany",
-    "away": "Ivory Coast",
-    "kickoff_ts": 1781985600,
-    "group": "E",
-    "matchday": 2,
-    "venue": "Toronto",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_E04",
-    "home": "Ecuador",
-    "away": "Curacao",
-    "kickoff_ts": 1782000000,
-    "group": "E",
-    "matchday": 2,
-    "venue": "Kansas City",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_F04",
-    "home": "Tunisia",
-    "away": "Japan",
-    "kickoff_ts": 1782014400,
-    "group": "F",
-    "matchday": 2,
-    "venue": "Monterrey",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_H03",
-    "home": "Spain",
-    "away": "Saudi Arabia",
-    "kickoff_ts": 1782057600,
-    "group": "H",
-    "matchday": 2,
-    "venue": "Atlanta",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_G03",
-    "home": "Belgium",
-    "away": "Iran",
-    "kickoff_ts": 1782068400,
-    "group": "G",
-    "matchday": 2,
-    "venue": "Los Angeles",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_H04",
-    "home": "Uruguay",
-    "away": "Cape Verde",
-    "kickoff_ts": 1782079200,
-    "group": "H",
-    "matchday": 2,
-    "venue": "Miami",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_G04",
-    "home": "New Zealand",
-    "away": "Egypt",
-    "kickoff_ts": 1782090000,
-    "group": "G",
-    "matchday": 2,
-    "venue": "Vancouver",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_J03",
-    "home": "Argentina",
-    "away": "Austria",
-    "kickoff_ts": 1782147600,
-    "group": "J",
-    "matchday": 2,
-    "venue": "Dallas",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_I03",
-    "home": "France",
-    "away": "Iraq",
-    "kickoff_ts": 1782162000,
-    "group": "I",
-    "matchday": 2,
-    "venue": "Philadelphia",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_I04",
-    "home": "Norway",
-    "away": "Senegal",
-    "kickoff_ts": 1782172800,
-    "group": "I",
-    "matchday": 2,
-    "venue": "New York/New Jersey",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_J04",
-    "home": "Jordan",
-    "away": "Algeria",
-    "kickoff_ts": 1782183600,
-    "group": "J",
-    "matchday": 2,
-    "venue": "San Francisco Bay Area",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_K03",
-    "home": "Portugal",
-    "away": "Uzbekistan",
-    "kickoff_ts": 1782234000,
-    "group": "K",
-    "matchday": 2,
-    "venue": "Houston",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_L03",
-    "home": "England",
-    "away": "Ghana",
-    "kickoff_ts": 1782244800,
-    "group": "L",
-    "matchday": 2,
-    "venue": "Boston",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_L04",
-    "home": "Panama",
-    "away": "Croatia",
-    "kickoff_ts": 1782255600,
-    "group": "L",
-    "matchday": 2,
-    "venue": "Toronto",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_K04",
-    "home": "Colombia",
-    "away": "DR Congo",
-    "kickoff_ts": 1782266400,
-    "group": "K",
-    "matchday": 2,
-    "venue": "Guadalajara",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_B06",
-    "home": "Bosnia-Herzegovina",
-    "away": "Qatar",
-    "kickoff_ts": 1782327600,
-    "group": "B",
-    "matchday": 3,
-    "venue": "Seattle",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_C05",
-    "home": "Scotland",
-    "away": "Brazil",
-    "kickoff_ts": 1782338400,
-    "group": "C",
-    "matchday": 3,
-    "venue": "Miami",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_C06",
-    "home": "Morocco",
-    "away": "Haiti",
-    "kickoff_ts": 1782338400,
-    "group": "C",
-    "matchday": 3,
-    "venue": "Atlanta",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_A05",
-    "home": "Czechia",
-    "away": "Mexico",
-    "kickoff_ts": 1782349200,
-    "group": "A",
-    "matchday": 3,
-    "venue": "Mexico City",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_A06",
-    "home": "South Africa",
-    "away": "South Korea",
-    "kickoff_ts": 1782349200,
-    "group": "A",
-    "matchday": 3,
-    "venue": "Monterrey",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_B05",
-    "home": "Switzerland",
-    "away": "Canada",
-    "kickoff_ts": 1782349200,
-    "group": "B",
-    "matchday": 3,
-    "venue": "Vancouver",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_E05",
-    "home": "Ecuador",
-    "away": "Germany",
-    "kickoff_ts": 1782417600,
-    "group": "E",
-    "matchday": 3,
-    "venue": "New York/New Jersey",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_E06",
-    "home": "Curacao",
-    "away": "Ivory Coast",
-    "kickoff_ts": 1782417600,
-    "group": "E",
-    "matchday": 3,
-    "venue": "Philadelphia",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_F05",
-    "home": "Japan",
-    "away": "Sweden",
-    "kickoff_ts": 1782428400,
-    "group": "F",
-    "matchday": 3,
-    "venue": "Dallas",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_F06",
-    "home": "Tunisia",
-    "away": "Netherlands",
-    "kickoff_ts": 1782428400,
-    "group": "F",
-    "matchday": 3,
-    "venue": "Kansas City",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_D05",
-    "home": "Turkey",
-    "away": "United States",
-    "kickoff_ts": 1782439200,
-    "group": "D",
-    "matchday": 3,
-    "venue": "Los Angeles",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_D06",
-    "home": "Paraguay",
-    "away": "Australia",
-    "kickoff_ts": 1782439200,
-    "group": "D",
-    "matchday": 3,
-    "venue": "San Francisco Bay Area",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_I05",
-    "home": "Norway",
-    "away": "France",
-    "kickoff_ts": 1782500400,
-    "group": "I",
-    "matchday": 3,
-    "venue": "Boston",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_I06",
-    "home": "Senegal",
-    "away": "Iraq",
-    "kickoff_ts": 1782500400,
-    "group": "I",
-    "matchday": 3,
-    "venue": "Toronto",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_H05",
-    "home": "Cape Verde",
-    "away": "Saudi Arabia",
-    "kickoff_ts": 1782518400,
-    "group": "H",
-    "matchday": 3,
-    "venue": "Houston",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_H06",
-    "home": "Uruguay",
-    "away": "Spain",
-    "kickoff_ts": 1782518400,
-    "group": "H",
-    "matchday": 3,
-    "venue": "Guadalajara",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_G05",
-    "home": "Egypt",
-    "away": "Iran",
-    "kickoff_ts": 1782529200,
-    "group": "G",
-    "matchday": 3,
-    "venue": "Seattle",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_G06",
-    "home": "New Zealand",
-    "away": "Belgium",
-    "kickoff_ts": 1782529200,
-    "group": "G",
-    "matchday": 3,
-    "venue": "Vancouver",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_L05",
-    "home": "Panama",
-    "away": "England",
-    "kickoff_ts": 1782594000,
-    "group": "L",
-    "matchday": 3,
-    "venue": "New York/New Jersey",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_L06",
-    "home": "Croatia",
-    "away": "Ghana",
-    "kickoff_ts": 1782594000,
-    "group": "L",
-    "matchday": 3,
-    "venue": "Philadelphia",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_K05",
-    "home": "Colombia",
-    "away": "Portugal",
-    "kickoff_ts": 1782601200,
-    "group": "K",
-    "matchday": 3,
-    "venue": "Miami",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_K06",
-    "home": "DR Congo",
-    "away": "Uzbekistan",
-    "kickoff_ts": 1782601200,
-    "group": "K",
-    "matchday": 3,
-    "venue": "Atlanta",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_J05",
-    "home": "Algeria",
-    "away": "Austria",
-    "kickoff_ts": 1782612000,
-    "group": "J",
-    "matchday": 3,
-    "venue": "Kansas City",
-    "stage": "group"
-  },
-  {
-    "match_id": "wc2026_g_J06",
-    "home": "Jordan",
-    "away": "Argentina",
-    "kickoff_ts": 1782612000,
-    "group": "J",
-    "matchday": 3,
-    "venue": "Dallas",
-    "stage": "group"
+    "match_id": "epl2027_md1_01",
+    "external_match_id": 560542,
+    "home": "Arsenal",
+    "away": "Coventry City",
+    "home_full": "Arsenal FC",
+    "away_full": "Coventry City FC",
+    "kickoff_ts": 1787338800,
+    "matchday": 1
+  },
+  {
+    "match_id": "epl2027_md1_02",
+    "external_match_id": 560543,
+    "home": "Hull City",
+    "away": "Manchester United",
+    "home_full": "Hull City AFC",
+    "away_full": "Manchester United FC",
+    "kickoff_ts": 1787398200,
+    "matchday": 1
+  },
+  {
+    "match_id": "epl2027_md1_03",
+    "external_match_id": 560544,
+    "home": "Ipswich",
+    "away": "Sunderland",
+    "home_full": "Ipswich Town FC",
+    "away_full": "Sunderland AFC",
+    "kickoff_ts": 1787407200,
+    "matchday": 1
+  },
+  {
+    "match_id": "epl2027_md1_04",
+    "external_match_id": 560545,
+    "home": "Nottingham Forest",
+    "away": "Leeds United",
+    "home_full": "Nottingham Forest FC",
+    "away_full": "Leeds United FC",
+    "kickoff_ts": 1787407200,
+    "matchday": 1
+  },
+  {
+    "match_id": "epl2027_md1_05",
+    "external_match_id": 560546,
+    "home": "Everton",
+    "away": "Crystal Palace",
+    "home_full": "Everton FC",
+    "away_full": "Crystal Palace FC",
+    "kickoff_ts": 1787407200,
+    "matchday": 1
+  },
+  {
+    "match_id": "epl2027_md1_06",
+    "external_match_id": 560547,
+    "home": "Brentford",
+    "away": "Tottenham",
+    "home_full": "Brentford FC",
+    "away_full": "Tottenham Hotspur FC",
+    "kickoff_ts": 1787416200,
+    "matchday": 1
+  },
+  {
+    "match_id": "epl2027_md1_07",
+    "external_match_id": 560548,
+    "home": "Manchester City",
+    "away": "Bournemouth",
+    "home_full": "Manchester City FC",
+    "away_full": "AFC Bournemouth",
+    "kickoff_ts": 1787490000,
+    "matchday": 1
+  },
+  {
+    "match_id": "epl2027_md1_08",
+    "external_match_id": 560549,
+    "home": "Brighton",
+    "away": "Aston Villa",
+    "home_full": "Brighton & Hove Albion FC",
+    "away_full": "Aston Villa FC",
+    "kickoff_ts": 1787490000,
+    "matchday": 1
+  },
+  {
+    "match_id": "epl2027_md1_09",
+    "external_match_id": 560550,
+    "home": "Newcastle",
+    "away": "Liverpool",
+    "home_full": "Newcastle United FC",
+    "away_full": "Liverpool FC",
+    "kickoff_ts": 1787499000,
+    "matchday": 1
+  },
+  {
+    "match_id": "epl2027_md1_10",
+    "external_match_id": 560551,
+    "home": "Fulham",
+    "away": "Chelsea",
+    "home_full": "Fulham FC",
+    "away_full": "Chelsea FC",
+    "kickoff_ts": 1787598000,
+    "matchday": 1
+  },
+  {
+    "match_id": "epl2027_md2_01",
+    "external_match_id": 560555,
+    "home": "Crystal Palace",
+    "away": "Manchester City",
+    "home_full": "Crystal Palace FC",
+    "away_full": "Manchester City FC",
+    "kickoff_ts": 1787943600,
+    "matchday": 2
+  },
+  {
+    "match_id": "epl2027_md2_02",
+    "external_match_id": 560552,
+    "home": "Liverpool",
+    "away": "Nottingham Forest",
+    "home_full": "Liverpool FC",
+    "away_full": "Nottingham Forest FC",
+    "kickoff_ts": 1788003000,
+    "matchday": 2
+  },
+  {
+    "match_id": "epl2027_md2_03",
+    "external_match_id": 560560,
+    "home": "Bournemouth",
+    "away": "Everton",
+    "home_full": "AFC Bournemouth",
+    "away_full": "Everton FC",
+    "kickoff_ts": 1788012000,
+    "matchday": 2
+  },
+  {
+    "match_id": "epl2027_md2_04",
+    "external_match_id": 560561,
+    "home": "Coventry City",
+    "away": "Hull City",
+    "home_full": "Coventry City FC",
+    "away_full": "Hull City AFC",
+    "kickoff_ts": 1788012000,
+    "matchday": 2
+  },
+  {
+    "match_id": "epl2027_md2_05",
+    "external_match_id": 560558,
+    "home": "Tottenham",
+    "away": "Newcastle",
+    "home_full": "Tottenham Hotspur FC",
+    "away_full": "Newcastle United FC",
+    "kickoff_ts": 1788021000,
+    "matchday": 2
+  },
+  {
+    "match_id": "epl2027_md2_06",
+    "external_match_id": 560554,
+    "home": "Sunderland",
+    "away": "Fulham",
+    "home_full": "Sunderland AFC",
+    "away_full": "Fulham FC",
+    "kickoff_ts": 1788094800,
+    "matchday": 2
+  },
+  {
+    "match_id": "epl2027_md2_07",
+    "external_match_id": 560556,
+    "home": "Chelsea",
+    "away": "Brighton",
+    "home_full": "Chelsea FC",
+    "away_full": "Brighton & Hove Albion FC",
+    "kickoff_ts": 1788094800,
+    "matchday": 2
+  },
+  {
+    "match_id": "epl2027_md2_08",
+    "external_match_id": 560559,
+    "home": "Leeds United",
+    "away": "Brentford",
+    "home_full": "Leeds United FC",
+    "away_full": "Brentford FC",
+    "kickoff_ts": 1788094800,
+    "matchday": 2
+  },
+  {
+    "match_id": "epl2027_md2_09",
+    "external_match_id": 560553,
+    "home": "Manchester United",
+    "away": "Ipswich",
+    "home_full": "Manchester United FC",
+    "away_full": "Ipswich Town FC",
+    "kickoff_ts": 1788103800,
+    "matchday": 2
+  },
+  {
+    "match_id": "epl2027_md2_10",
+    "external_match_id": 560557,
+    "home": "Aston Villa",
+    "away": "Arsenal",
+    "home_full": "Aston Villa FC",
+    "away_full": "Arsenal FC",
+    "kickoff_ts": 1788202800,
+    "matchday": 2
+  },
+  {
+    "match_id": "epl2027_md3_01",
+    "external_match_id": 560566,
+    "home": "Ipswich",
+    "away": "Liverpool",
+    "home_full": "Ipswich Town FC",
+    "away_full": "Liverpool FC",
+    "kickoff_ts": 1788548400,
+    "matchday": 3
+  },
+  {
+    "match_id": "epl2027_md3_02",
+    "external_match_id": 560571,
+    "home": "Newcastle",
+    "away": "Bournemouth",
+    "home_full": "Newcastle United FC",
+    "away_full": "AFC Bournemouth",
+    "kickoff_ts": 1788607800,
+    "matchday": 3
+  },
+  {
+    "match_id": "epl2027_md3_03",
+    "external_match_id": 560562,
+    "home": "Nottingham Forest",
+    "away": "Tottenham",
+    "home_full": "Nottingham Forest FC",
+    "away_full": "Tottenham Hotspur FC",
+    "kickoff_ts": 1788616800,
+    "matchday": 3
+  },
+  {
+    "match_id": "epl2027_md3_04",
+    "external_match_id": 560563,
+    "home": "Manchester City",
+    "away": "Coventry City",
+    "home_full": "Manchester City FC",
+    "away_full": "Coventry City FC",
+    "kickoff_ts": 1788616800,
+    "matchday": 3
+  },
+  {
+    "match_id": "epl2027_md3_05",
+    "external_match_id": 560564,
+    "home": "Brighton",
+    "away": "Leeds United",
+    "home_full": "Brighton & Hove Albion FC",
+    "away_full": "Leeds United FC",
+    "kickoff_ts": 1788616800,
+    "matchday": 3
+  },
+  {
+    "match_id": "epl2027_md3_06",
+    "external_match_id": 560565,
+    "home": "Brentford",
+    "away": "Sunderland",
+    "home_full": "Brentford FC",
+    "away_full": "Sunderland AFC",
+    "kickoff_ts": 1788616800,
+    "matchday": 3
+  },
+  {
+    "match_id": "epl2027_md3_07",
+    "external_match_id": 560568,
+    "home": "Fulham",
+    "away": "Crystal Palace",
+    "home_full": "Fulham FC",
+    "away_full": "Crystal Palace FC",
+    "kickoff_ts": 1788616800,
+    "matchday": 3
+  },
+  {
+    "match_id": "epl2027_md3_08",
+    "external_match_id": 560569,
+    "home": "Hull City",
+    "away": "Aston Villa",
+    "home_full": "Hull City AFC",
+    "away_full": "Aston Villa FC",
+    "kickoff_ts": 1788625800,
+    "matchday": 3
+  },
+  {
+    "match_id": "epl2027_md3_09",
+    "external_match_id": 560567,
+    "home": "Everton",
+    "away": "Manchester United",
+    "home_full": "Everton FC",
+    "away_full": "Manchester United FC",
+    "kickoff_ts": 1788699600,
+    "matchday": 3
+  },
+  {
+    "match_id": "epl2027_md3_10",
+    "external_match_id": 560570,
+    "home": "Arsenal",
+    "away": "Chelsea",
+    "home_full": "Arsenal FC",
+    "away_full": "Chelsea FC",
+    "kickoff_ts": 1788708600,
+    "matchday": 3
+  },
+  {
+    "match_id": "epl2027_md4_01",
+    "external_match_id": 560572,
+    "home": "Crystal Palace",
+    "away": "Ipswich",
+    "home_full": "Crystal Palace FC",
+    "away_full": "Ipswich Town FC",
+    "kickoff_ts": 1789221600,
+    "matchday": 4
+  },
+  {
+    "match_id": "epl2027_md4_02",
+    "external_match_id": 560573,
+    "home": "Liverpool",
+    "away": "Fulham",
+    "home_full": "Liverpool FC",
+    "away_full": "Fulham FC",
+    "kickoff_ts": 1789221600,
+    "matchday": 4
+  },
+  {
+    "match_id": "epl2027_md4_03",
+    "external_match_id": 560574,
+    "home": "Aston Villa",
+    "away": "Nottingham Forest",
+    "home_full": "Aston Villa FC",
+    "away_full": "Nottingham Forest FC",
+    "kickoff_ts": 1789221600,
+    "matchday": 4
+  },
+  {
+    "match_id": "epl2027_md4_04",
+    "external_match_id": 560576,
+    "home": "Bournemouth",
+    "away": "Brentford",
+    "home_full": "AFC Bournemouth",
+    "away_full": "Brentford FC",
+    "kickoff_ts": 1789221600,
+    "matchday": 4
+  },
+  {
+    "match_id": "epl2027_md4_05",
+    "external_match_id": 560581,
+    "home": "Chelsea",
+    "away": "Hull City",
+    "home_full": "Chelsea FC",
+    "away_full": "Hull City AFC",
+    "kickoff_ts": 1789221600,
+    "matchday": 4
+  },
+  {
+    "match_id": "epl2027_md4_06",
+    "external_match_id": 560575,
+    "home": "Tottenham",
+    "away": "Everton",
+    "home_full": "Tottenham Hotspur FC",
+    "away_full": "Everton FC",
+    "kickoff_ts": 1789230600,
+    "matchday": 4
+  },
+  {
+    "match_id": "epl2027_md4_07",
+    "external_match_id": 560577,
+    "home": "Sunderland",
+    "away": "Arsenal",
+    "home_full": "Sunderland AFC",
+    "away_full": "Arsenal FC",
+    "kickoff_ts": 1789239600,
+    "matchday": 4
+  },
+  {
+    "match_id": "epl2027_md4_08",
+    "external_match_id": 560578,
+    "home": "Coventry City",
+    "away": "Brighton",
+    "home_full": "Coventry City FC",
+    "away_full": "Brighton & Hove Albion FC",
+    "kickoff_ts": 1789304400,
+    "matchday": 4
+  },
+  {
+    "match_id": "epl2027_md4_09",
+    "external_match_id": 560580,
+    "home": "Manchester United",
+    "away": "Manchester City",
+    "home_full": "Manchester United FC",
+    "away_full": "Manchester City FC",
+    "kickoff_ts": 1789313400,
+    "matchday": 4
+  },
+  {
+    "match_id": "epl2027_md4_10",
+    "external_match_id": 560579,
+    "home": "Leeds United",
+    "away": "Newcastle",
+    "home_full": "Leeds United FC",
+    "away_full": "Newcastle United FC",
+    "kickoff_ts": 1789412400,
+    "matchday": 4
+  },
+  {
+    "match_id": "epl2027_md5_01",
+    "external_match_id": 560591,
+    "home": "Brentford",
+    "away": "Chelsea",
+    "home_full": "Brentford FC",
+    "away_full": "Chelsea FC",
+    "kickoff_ts": 1789758000,
+    "matchday": 5
+  },
+  {
+    "match_id": "epl2027_md5_02",
+    "external_match_id": 560587,
+    "home": "Tottenham",
+    "away": "Aston Villa",
+    "home_full": "Tottenham Hotspur FC",
+    "away_full": "Aston Villa FC",
+    "kickoff_ts": 1789817400,
+    "matchday": 5
+  },
+  {
+    "match_id": "epl2027_md5_03",
+    "external_match_id": 560584,
+    "home": "Everton",
+    "away": "Ipswich",
+    "home_full": "Everton FC",
+    "away_full": "Ipswich Town FC",
+    "kickoff_ts": 1789826400,
+    "matchday": 5
+  },
+  {
+    "match_id": "epl2027_md5_04",
+    "external_match_id": 560585,
+    "home": "Leeds United",
+    "away": "Crystal Palace",
+    "home_full": "Leeds United FC",
+    "away_full": "Crystal Palace FC",
+    "kickoff_ts": 1789826400,
+    "matchday": 5
+  },
+  {
+    "match_id": "epl2027_md5_05",
+    "external_match_id": 560586,
+    "home": "Brighton",
+    "away": "Arsenal",
+    "home_full": "Brighton & Hove Albion FC",
+    "away_full": "Arsenal FC",
+    "kickoff_ts": 1789826400,
+    "matchday": 5
+  },
+  {
+    "match_id": "epl2027_md5_06",
+    "external_match_id": 560588,
+    "home": "Newcastle",
+    "away": "Hull City",
+    "home_full": "Newcastle United FC",
+    "away_full": "Hull City AFC",
+    "kickoff_ts": 1789826400,
+    "matchday": 5
+  },
+  {
+    "match_id": "epl2027_md5_07",
+    "external_match_id": 560590,
+    "home": "Manchester City",
+    "away": "Sunderland",
+    "home_full": "Manchester City FC",
+    "away_full": "Sunderland AFC",
+    "kickoff_ts": 1789826400,
+    "matchday": 5
+  },
+  {
+    "match_id": "epl2027_md5_08",
+    "external_match_id": 560589,
+    "home": "Nottingham Forest",
+    "away": "Coventry City",
+    "home_full": "Nottingham Forest FC",
+    "away_full": "Coventry City FC",
+    "kickoff_ts": 1789835400,
+    "matchday": 5
+  },
+  {
+    "match_id": "epl2027_md5_09",
+    "external_match_id": 560582,
+    "home": "Bournemouth",
+    "away": "Liverpool",
+    "home_full": "AFC Bournemouth",
+    "away_full": "Liverpool FC",
+    "kickoff_ts": 1789909200,
+    "matchday": 5
+  },
+  {
+    "match_id": "epl2027_md5_10",
+    "external_match_id": 560583,
+    "home": "Fulham",
+    "away": "Manchester United",
+    "home_full": "Fulham FC",
+    "away_full": "Manchester United FC",
+    "kickoff_ts": 1789918200,
+    "matchday": 5
   }
 ]

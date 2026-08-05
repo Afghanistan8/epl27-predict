@@ -58,7 +58,7 @@ export async function getMatches() {
   const { data, error } = await sb
     .from('matches')
     .select(`
-      match_id, contract_address, home, away, kickoff_ts, stage, group_letter,
+      match_id, contract_address, home, away, kickoff_ts, matchday,
       status, result, final_score, live_score_home, live_score_away, live_minute
     `)
     .order('kickoff_ts', { ascending: true });
@@ -95,12 +95,53 @@ export async function getMyPredictions(address) {
   const { data, error } = await sb
     .from('predictions')
     .select(`
-      *, match:matches(home, away, kickoff_ts, status, result, final_score, group_letter)
+      *, match:matches(home, away, kickoff_ts, status, result, final_score, matchday)
     `)
     .eq('user_address', address)
     .order('submitted_at', { ascending: false });
   if (error) throw error;
   return data || [];
+}
+
+/* ---------- Standings (PL table tab) ---------- */
+
+export async function getStandings() {
+  const { data, error } = await sb
+    .from('standings')
+    .select('*')
+    .order('position', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+/* ---------- AI Call (validators' own pick per fixture) ---------- */
+
+export async function getAIPredictionsMap() {
+  // Only 'stored' rows have a real pick to show.
+  const { data, error } = await sb
+    .from('ai_predictions')
+    .select('match_id, pick, confidence, reason, status')
+    .eq('status', 'stored');
+  if (error) {
+    console.warn('getAIPredictionsMap:', error.message);
+    return {};
+  }
+  const byId = {};
+  (data || []).forEach((r) => { byId[r.match_id] = r; });
+  return byId;
+}
+
+export async function getAIPrediction(matchId) {
+  const { data, error } = await sb
+    .from('ai_predictions')
+    .select('match_id, pick, confidence, reason, status')
+    .eq('match_id', matchId)
+    .maybeSingle();
+  if (error) {
+    console.warn('getAIPrediction:', error.message);
+    return null;
+  }
+  return data && data.status === 'stored' ? data : null;
 }
 
 /* ---------- Leaderboard ---------- */

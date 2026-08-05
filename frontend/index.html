@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WC '26 — Predict every match</title>
-  <meta name="description" content="A pari-mutuel prediction market for the 2026 FIFA World Cup, settled on-chain via GenLayer." />
+  <title>EPL '27 — Predict every match</title>
+  <meta name="description" content="A pari-mutuel prediction market for the 2026/27 English Premier League, settled on-chain via GenLayer." />
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 
@@ -20,11 +20,12 @@
 <header class="site-header">
   <div class="header-inner">
     <a href="#/" class="brand">
-      <span class="brand-mark">WC</span>
-      <span class="brand-year">'26</span>
+      <span class="brand-mark">EPL</span>
+      <span class="brand-year">'27</span>
     </a>
     <nav class="primary-nav" id="primary-nav">
       <a href="#/" class="nav-link" data-route="home">Matches</a>
+      <a href="#/table" class="nav-link" data-route="table">Table</a>
       <a href="#/me" class="nav-link" data-route="me">My picks</a>
       <a href="#/leaderboard" class="nav-link" data-route="leaderboard">Leaderboard</a>
     </nav>
@@ -46,10 +47,10 @@
   <section class="page" data-route="home" id="page-home">
     <div class="hero">
       <p class="eyebrow">Pari-mutuel · settled on-chain · GenLayer Bradbury</p>
-      <h1 class="hero-title">Predict every match of the<br><em>2026 FIFA World&nbsp;Cup</em>.</h1>
+      <h1 class="hero-title">Predict every match of the<br><em>2026/27 Premier&nbsp;League</em>.</h1>
       <p class="hero-lead">
-        Stake on any of 72 group-stage matches. Pools split between winners.
-        Match outcomes verified by AI consensus, not oracles.
+        Stake GEN on home, draw, or away. Winners split the pool, pro-rata.
+        Final scores read on-chain by AI consensus — no oracle, no house cut.
       </p>
       <div class="hero-stats" id="hero-stats">
         <div class="stat">
@@ -90,6 +91,17 @@
     </div>
   </section>
 
+  <!-- ─── LEAGUE TABLE ─────────────────────────────────────────── -->
+  <section class="page" data-route="table" id="page-table" hidden>
+    <header class="page-header">
+      <p class="eyebrow">2026/27 season</p>
+      <h1 class="page-title">Premier League table</h1>
+    </header>
+    <div id="table-list">
+      <div class="empty-state">Loading table…</div>
+    </div>
+  </section>
+
   <!-- ─── MY PREDICTIONS ───────────────────────────────────────── -->
   <section class="page" data-route="me" id="page-me" hidden>
     <header class="page-header">
@@ -118,7 +130,7 @@
 
 <footer class="site-footer">
   <div class="footer-inner">
-    <p>WC '26 Predict · Built on <a href="https://genlayer.com" target="_blank" rel="noopener">GenLayer</a> Bradbury · Testnet only — no real value.</p>
+    <p>EPL '27 Predict · Built on <a href="https://genlayer.com" target="_blank" rel="noopener">GenLayer</a> Bradbury · Testnet only — no real value.</p>
     <p class="footer-links">
       <a href="https://testnet-faucet.genlayer.foundation" target="_blank" rel="noopener">Get test GEN ↗</a>
       <span class="footer-sep">·</span>

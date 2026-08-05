@@ -1,12 +1,14 @@
-/* lib/config.js — Bradbury testnet config
- *
- * PASTE YOUR EXISTING KEYS INTO THE TWO LINES BELOW.
- * Open your old lib/config.js, copy the values for SUPABASE_URL and
- * SUPABASE_PUBLISHABLE_KEY, paste them here, replacing the YOUR_... placeholders.
- */
+/* lib/config.js — Bradbury testnet + EPL '27 Supabase config */
 
-export const SUPABASE_URL = 'https://zqyoglethlfsatqeqskp.supabase.co';
-export const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_9P6Ksmnph9F9_NR2rgebog_ost_pOwP';
+// EPL '27 Predict uses its OWN dedicated Supabase project (separate from WC).
+// Project ref: lhcazntvrolghupdsheh
+export const SUPABASE_URL = 'https://lhcazntvrolghupdsheh.supabase.co';
+
+// ⚠️ PASTE THE EPL PROJECT'S *PUBLISHABLE* KEY HERE (starts with sb_publishable_).
+// Supabase dashboard → project lhcazntvrolghupdsheh → Settings → API keys →
+// "Publishable" (the renamed anon key). This is safe to ship in the browser;
+// RLS restricts it to public reads. The secret key stays server-side only.
+export const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_RNO7e-1QW8bt4Xrfwrp2rA_cWSVm_8I';
 
 // GenLayer Bradbury testnet — DO NOT CHANGE
 export const STUDIONET = {
