@@ -19,18 +19,21 @@ function readClient() {
 
 async function writeClient() {
   // Hard gate: guarantee the wallet is on Bradbury before signing, so a stale
-  // chain flag can never let a tx reach genlayer-js on the wrong network. The
-  // SDK error ("Wallet is on chain 61999 but client is configured for chain
-  // 4221") is prevented here — we force the switch or throw.
+  // chain flag can never let a tx reach genlayer-js on the wrong network.
   const provider = await ensureStudionet();
   if (!provider) throw new Error('No wallet provider available.');
   const accounts = await provider.request({ method: 'eth_accounts' });
   const addr = accounts?.[0];
   if (!addr) throw new Error('Wallet not connected.');
+  // CRITICAL: genlayer-js reads `config.provider` (top-level) — it builds its
+  // OWN transport and IGNORES a viem `transport` key. Passing the chosen
+  // provider here makes genlayer-js run its chain check AND sign through the
+  // exact wallet the user picked (not window.ethereum, which may be a
+  // different extension on the wrong chain).
   return createClient({
     chain: testnetBradbury,
     account: addr,
-    transport: { type: 'custom', provider },
+    provider,
   });
 }
 
