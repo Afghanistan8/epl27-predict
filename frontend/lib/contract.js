@@ -3,8 +3,8 @@
  * Reads + writes against PredictionMarket contracts via genlayer-js on Bradbury.
  */
 
-import { createClient } from 'https://esm.sh/genlayer-js@latest';
-import { testnetBradbury } from 'https://esm.sh/genlayer-js@latest/chains';
+import { createClient } from 'https://esm.sh/genlayer-js@1.1.8';
+import { testnetBradbury } from 'https://esm.sh/genlayer-js@1.1.8/chains';
 import { STUDIONET, MIN_STAKE_GEN } from './config.js';
 import { ensureStudionet } from './wallet.js';
 
@@ -22,7 +22,10 @@ async function writeClient() {
   // chain flag can never let a tx reach genlayer-js on the wrong network.
   const provider = await ensureStudionet();
   if (!provider) throw new Error('No wallet provider available.');
-  const accounts = await provider.request({ method: 'eth_accounts' });
+  // eth_requestAccounts (not eth_accounts): re-authorizes this origin and
+  // prompts if the wallet locked, instead of silently returning [] and
+  // hanging the write with no popup.
+  const accounts = await provider.request({ method: 'eth_requestAccounts' });
   const addr = accounts?.[0];
   if (!addr) throw new Error('Wallet not connected.');
   // CRITICAL: genlayer-js reads `config.provider` (top-level) — it builds its
