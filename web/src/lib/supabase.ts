@@ -142,13 +142,23 @@ export async function getMyPredictions(address?: string): Promise<PredictionRow[
   if (!address) return [];
   const { data, error } = await sb
     .from("predictions")
-    .select(
-      `*, matches(home, away, kickoff_ts, status, result, final_score, matchday)`
-    )
+    .select("*")
     .ilike("user_address", address)
     .order("submitted_at", { ascending: false });
   if (error) throw error;
-  return (data as PredictionRow[]) || [];
+  const preds = (data as PredictionRow[]) || [];
+
+  // Join match metadata client-side (avoids PostgREST embed needing a FK).
+  if (preds.length === 0) return preds;
+  const matchIds = [...new Set(preds.map((p) => p.match_id))];
+  const { data: matchRows } = await sb
+    .from("matches")
+    .select("match_id, home, away, kickoff_ts, status, result, final_score, matchday")
+    .in("match_id", matchIds);
+  const matchById: Record<string, Partial<Match>> = {};
+  (matchRows || []).forEach((m: Partial<Match> & { match_id: string }) => { matchById[m.match_id] = m; });
+  preds.forEach((p) => { p.matches = matchById[p.match_id] || null; });
+  return preds;
 }
 
 export async function readMyPrediction(matchId: string, address?: string) {

@@ -668,9 +668,11 @@ async function renderMyPicks() {
   el.innerHTML = '<div class="empty-state">Loading your picks…</div>';
 
   try {
+    // Fetch the user's predictions, then the matches they reference, and join
+    // client-side. (Avoids a PostgREST embed that needs a FK relationship.)
     const { data, error } = await sb
       .from('predictions')
-      .select('*, matches(home, away, kickoff_ts, status, result, matchday)')
+      .select('*')
       .ilike('user_address', state.address)
       .order('submitted_at', { ascending: false });
 
@@ -687,6 +689,16 @@ async function renderMyPicks() {
         </div>`;
       return;
     }
+
+    // Join match metadata client-side.
+    const matchIds = [...new Set(data.map((p) => p.match_id))];
+    const { data: matchRows } = await sb
+      .from('matches')
+      .select('match_id, home, away, kickoff_ts, status, result, matchday')
+      .in('match_id', matchIds);
+    const matchById = {};
+    (matchRows || []).forEach((m) => { matchById[m.match_id] = m; });
+    data.forEach((p) => { p.matches = matchById[p.match_id] || null; });
 
     // Calculate stats
     let totalStaked = 0n;
@@ -787,10 +799,10 @@ async function renderLeaderboard() {
   el.innerHTML = '<div class="empty-state">Loading leaderboard…</div>';
 
   try {
-    // Pull predictions with match info (one query)
+    // Pull all predictions, then match statuses, and join client-side.
     const { data: preds, error: pErr } = await sb
       .from('predictions')
-      .select('user_address, pick, stake_wei, matches(status, result)');
+      .select('user_address, pick, stake_wei, match_id');
 
     if (pErr) {
       console.error(pErr);
@@ -802,6 +814,16 @@ async function renderLeaderboard() {
       el.innerHTML = `<div class="empty-state">No predictions yet. Be the first to predict!</div>`;
       return;
     }
+
+    // Match results, joined client-side.
+    const matchIds = [...new Set(preds.map((p) => p.match_id))];
+    const { data: matchRows } = await sb
+      .from('matches')
+      .select('match_id, status, result')
+      .in('match_id', matchIds);
+    const matchById = {};
+    (matchRows || []).forEach((m) => { matchById[m.match_id] = m; });
+    preds.forEach((p) => { p.matches = matchById[p.match_id] || null; });
 
     // Pull all users (separate query — join client-side)
     const { data: users } = await sb.from('users').select('user_address, username');

@@ -23,9 +23,20 @@ export default function LeaderboardPage() {
       try {
         const { data: preds, error: pErr } = await sb
           .from("predictions")
-          .select("user_address, pick, stake_wei, matches(status, result)");
+          .select("user_address, pick, stake_wei, match_id");
         if (pErr) throw pErr;
         if (!preds || preds.length === 0) { setRows([]); return; }
+
+        // Join match results client-side (avoids PostgREST embed needing a FK).
+        const matchIds = [...new Set(preds.map((p: { match_id: string }) => p.match_id))];
+        const { data: matchRows } = await sb
+          .from("matches")
+          .select("match_id, status, result")
+          .in("match_id", matchIds);
+        const matchById: Record<string, { status?: string; result?: string }> = {};
+        (matchRows || []).forEach((m: { match_id: string; status?: string; result?: string }) => {
+          matchById[m.match_id] = m;
+        });
 
         const { data: users } = await sb.from("users").select("user_address, username");
         const nameByAddr: Record<string, string> = {};
@@ -35,8 +46,7 @@ export default function LeaderboardPage() {
 
         const byUser: Record<string, Row> = {};
         for (const p of preds as unknown as {
-          user_address: string; pick: string; stake_wei: string;
-          matches?: { status?: string; result?: string } | null;
+          user_address: string; pick: string; stake_wei: string; match_id: string;
         }[]) {
           const addr = (p.user_address || "").toLowerCase();
           if (!byUser[addr]) {
@@ -46,7 +56,7 @@ export default function LeaderboardPage() {
           u.total++;
           const stake = BigInt(p.stake_wei || 0);
           u.stakedWei += stake;
-          const m = p.matches;
+          const m = matchById[p.match_id];
           const isResolved = m?.status === "resolved" || m?.status === "finished";
           if (isResolved && m?.result === p.pick) { u.won++; u.wonStakeWei += stake; }
           else if (isResolved && m?.result && m.result !== p.pick) u.lost++;
