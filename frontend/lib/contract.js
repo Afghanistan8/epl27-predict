@@ -6,7 +6,7 @@
 import { createClient } from 'https://esm.sh/genlayer-js@latest';
 import { testnetBradbury } from 'https://esm.sh/genlayer-js@latest/chains';
 import { STUDIONET, MIN_STAKE_GEN } from './config.js';
-import { getActiveProvider } from './wallet.js';
+import { ensureStudionet } from './wallet.js';
 
 /* ---------- client ---------- */
 
@@ -18,9 +18,11 @@ function readClient() {
 }
 
 async function writeClient() {
-  // Use the SAME wallet the user picked in the chooser, so writes are signed
-  // by the connected account (never a different injected wallet).
-  const provider = getActiveProvider();
+  // Hard gate: guarantee the wallet is on Bradbury before signing, so a stale
+  // chain flag can never let a tx reach genlayer-js on the wrong network. The
+  // SDK error ("Wallet is on chain 61999 but client is configured for chain
+  // 4221") is prevented here — we force the switch or throw.
+  const provider = await ensureStudionet();
   if (!provider) throw new Error('No wallet provider available.');
   const accounts = await provider.request({ method: 'eth_accounts' });
   const addr = accounts?.[0];

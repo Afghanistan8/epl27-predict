@@ -2,7 +2,7 @@
 // Reads use the plain read client; writes bind to the wallet the user picked.
 
 import { TransactionStatus } from "genlayer-js/types";
-import { getReadClient, getWriteClient, ensureWalletAuthorized, type Eip1193Provider } from "@/config/genlayer";
+import { getReadClient, getWriteClient, ensureWalletAuthorized, ensureWalletChain, type Eip1193Provider } from "@/config/genlayer";
 
 export type Pools = { home: bigint; draw: bigint; away: bigint; total: bigint };
 
@@ -35,6 +35,7 @@ async function write(
   value: bigint
 ) {
   await ensureWalletAuthorized(address, provider);
+  await ensureWalletChain(provider);
   const c = getWriteClient(address, provider);
   const txHash = await c.writeContract({
     address: contractAddress as `0x${string}`,
