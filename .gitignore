@@ -22,3 +22,5 @@ deploy_checkpoint.json
 
 # OS
 Thumbs.db
+
+.claude/
