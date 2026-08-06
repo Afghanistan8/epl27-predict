@@ -65,12 +65,19 @@ export default async function handler(req, res) {
 
   try {
     // 2. Read the caller's ACTUAL on-chain prediction. This is the gate:
-    //    if they didn't stake, there is nothing to mirror.
-    const pred = await gl.readContract({
-      address: match.contract_address,
-      functionName: 'get_my_prediction',
-      args: [user_address],
-    });
+    //    if they didn't stake, there is nothing to mirror. A read that reverts
+    //    or hasn't finalized is treated the same as "no prediction" — we never
+    //    write something the chain doesn't (yet) prove.
+    let pred = null;
+    try {
+      pred = await gl.readContract({
+        address: match.contract_address,
+        functionName: 'get_my_prediction',
+        args: [user_address],
+      });
+    } catch (readErr) {
+      return res.status(409).json({ error: 'no verifiable on-chain prediction yet (may still be finalizing)' });
+    }
 
     if (!pred?.has_predicted) {
       return res.status(409).json({ error: 'no on-chain prediction for this address' });
