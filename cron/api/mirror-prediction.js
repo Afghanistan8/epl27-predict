@@ -19,7 +19,24 @@ import { createClient as createGenLayerClient } from 'genlayer-js';
 import { testnetBradbury } from 'genlayer-js/chains';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
+// genlayer-js's calldata encoder for Address type arguments
+import { abi } from 'genlayer-js';
+const { calldata } = abi;
+
 const PICKS = new Set(['home', 'draw', 'away']);
+
+// genlayer-js encodes a plain hex string as a STRING, not an Address, so
+// contract reads with an `Address` argument revert once the map is non-empty.
+// Build the calldata's SPECIAL_ADDR form and decode it into a real
+// CalldataAddress instance (the only thing the encoder treats as an address).
+const SPECIAL_ADDR = (3 << 3) | 0; // 24
+function glAddress(hex) {
+  const h = hex.replace(/^0x/, '');
+  const bytes = new Uint8Array(21);
+  bytes[0] = SPECIAL_ADDR;
+  for (let i = 0; i < 20; i++) bytes[1 + i] = parseInt(h.slice(i * 2, i * 2 + 2), 16);
+  return calldata.decode(bytes);
+}
 
 function isAddress(a) {
   return typeof a === 'string' && /^0x[0-9a-fA-F]{40}$/.test(a);
@@ -73,7 +90,7 @@ export default async function handler(req, res) {
       pred = await gl.readContract({
         address: match.contract_address,
         functionName: 'get_my_prediction',
-        args: [user_address],
+        args: [glAddress(user_address)],
       });
     } catch (readErr) {
       return res.status(409).json({ error: 'no verifiable on-chain prediction yet (may still be finalizing)' });

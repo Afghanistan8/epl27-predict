@@ -3,12 +3,25 @@
  * Reads + writes against PredictionMarket contracts via genlayer-js on Bradbury.
  */
 
-import { createClient } from 'https://esm.sh/genlayer-js@1.1.8';
+import { createClient, abi } from 'https://esm.sh/genlayer-js@1.1.8';
 import { testnetBradbury } from 'https://esm.sh/genlayer-js@1.1.8/chains';
 import { STUDIONET, MIN_STAKE_GEN } from './config.js';
 import { ensureStudionet } from './wallet.js';
 
 /* ---------- client ---------- */
+
+// genlayer-js encodes a plain hex string as a STRING, not an Address, so a
+// contract read with an `Address` argument (get_my_prediction) reverts once
+// the picks map is non-empty. Decode the calldata SPECIAL_ADDR form to a real
+// CalldataAddress so the argument is typed correctly.
+const SPECIAL_ADDR = (3 << 3) | 0; // 24
+function glAddress(hex) {
+  const h = String(hex).replace(/^0x/, '');
+  const bytes = new Uint8Array(21);
+  bytes[0] = SPECIAL_ADDR;
+  for (let i = 0; i < 20; i++) bytes[1 + i] = parseInt(h.slice(i * 2, i * 2 + 2), 16);
+  return abi.calldata.decode(bytes);
+}
 
 let _readClient = null;
 function readClient() {
@@ -100,7 +113,7 @@ export async function readMyPrediction(contractAddress, userAddress) {
     const result = await c.readContract({
       address: contractAddress,
       functionName: 'get_my_prediction',
-      args: [userAddress],
+      args: [glAddress(userAddress)],
     });
     if (!result?.has_predicted) return null;
     return {
