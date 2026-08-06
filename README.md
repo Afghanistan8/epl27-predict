@@ -1,252 +1,305 @@
 # EPL '27 Predict
 
-**A decentralized, pari-mutuel prediction market for the 2026/27 English Premier League, built on [GenLayer](https://genlayer.com) Bradbury testnet.**
+**A fully on-chain, pari-mutuel prediction market for the 2026/27 English Premier League — settled by AI consensus on [GenLayer](https://genlayer.com) Bradbury testnet, with no oracle, no backend resolver, and no admin keys touching the money.**
+
+🔗 **Live:** [epl27-predict.vercel.app](https://epl27-predict.vercel.app)
 
 ---
 
-## What it is
+## Why I built this
 
-EPL '27 Predict lets anyone stake GEN test tokens on the outcome of every Premier League match this season — home win, draw, or away win. Each match gets its own Intelligent Contract that, after the final whistle, **reads the score directly from BBC Sport via LLM consensus** and pays out winners automatically. No human resolver, no oracle, no admin keys.
+I built a version of this for the 2026 World Cup first. When the tournament ended I wanted to keep the idea alive, and the Premier League turned out to be a far better fit — so I ported the whole thing to the 2026/27 EPL season and rebuilt the parts that were fighting the World Cup format.
 
-50 contracts are already deployed for matchdays 1–5 (21 Aug – 20 Sep 2026), with the rest of the 380-match season to follow matchday by matchday.
+Three reasons the EPL is the right home for this design:
 
----
+- **Home/away/draw is native.** Every Premier League match has a real home side playing at their own ground. The pari-mutuel `home / draw / away` model fits perfectly instead of being a compromise for neutral-venue group games.
+- **The fixtures are fixed.** All 380 fixtures are published before the season and never change into a bracket. No "winner of Group C plays runner-up of Group D" unknowns to model.
+- **A full season to iterate on.** 38 matchdays means I can roll out contracts in waves, watch resolution behave against real results, and improve the pipeline as the season runs.
 
-## Why the EPL is a better fit for this than the World Cup
-
-The GenLayer team reviewed my WC '26 build and praised the oracle-free pari-mutuel design. Their feedback pointed to exactly the things EPL fixes:
-
-- **Home/away is native** — every EPL match has a real home side at their own ground, so the home/draw/away model works perfectly, not as a compromise.
-- **All 380 fixtures are published upfront** — released on 19 Jun 2026, never change. No knockout-bracket unknowns.
-- **A full season** — 38 matchdays of rolling contract deployments means the architecture can be tested and improved across every matchday.
+The core belief hasn't changed since the World Cup build: **a prediction market shouldn't need a trusted oracle.** GenLayer lets the contract itself read the web and reach consensus on what happened. That's the whole thing.
 
 ---
 
-## Why GenLayer
+## What it does
 
-### 1. The contract reads the web
+- Anyone with test GEN can stake on the outcome of any deployed Premier League fixture — **home win, draw, or away win** — with a 2 GEN minimum.
+- Every match is its own **Intelligent Contract** holding three pools (home/draw/away). Stakes go into the pool for your pick.
+- After kickoff, the contract **reads the full-time score straight off BBC Sport** and resolves itself through validator consensus. Winners split the entire pot pro-rata. No rake, no house edge.
+- Separately, GenLayer's validators publish their **own pre-match prediction** ("the AI Call") for each fixture, stored on-chain, shown next to the crowd's pools so you can see where the machine and the market disagree.
+- A live **Premier League table** and a **leaderboard** of the sharpest predictors round it out.
 
-In `prediction_market.py`, the contract fetches the BBC Sport scoreboard during resolution:
+Everything the money touches lives on-chain. Supabase is only a fast read-mirror so the UI loads instantly — it is never the source of truth.
+
+---
+
+## How it works under the hood
+
+### 1. The contract reads the web itself
+
+In `prediction_market.py`, resolution pulls the live BBC Sport scoreboard *inside* the contract execution:
 
 ```python
 web_data = gl.nondet.web.render(resolution_url, mode="text")
 ```
 
-No oracle. No off-chain pusher. The BBC Sport page itself is the source of truth — scraped by the validators at resolution time.
+There is no oracle service, no off-chain job pushing scores in, no trusted signer. The BBC Sport page **is** the source of truth, fetched by the validators at the moment of resolution.
 
-### 2. AI consensus on ambiguous data
+### 2. AI consensus turns a messy web page into a settled result
 
-The score is extracted by an LLM, with multiple validators reaching the same structured JSON or it does not finalize:
+The score is extracted by an LLM, and the result only finalizes if the validators independently agree on the same structured answer:
 
 ```python
 result_json = gl.eq_principle.strict_eq(get_match_result)
 ```
 
-Objective fact (final score of a match) → strict equivalence is the right call here.
+A final score is an objective fact, so I use **strict equivalence** here — every validator must arrive at the identical `{score, winner}` JSON or nothing is written. If the match hasn't finished, `winner` comes back `-1` and the contract simply stays open to retry later.
 
-### 3. AI Call: validators predict before kickoff
+### 3. The AI Call — validators forecasting, not just reporting
 
-Beyond resolving results, a separate `AIPredictor` contract uses the **non-comparative** equivalence principle to reach consensus on a *predicted* outcome before the match. The leader LLM produces a pick; validators judge whether it is defensible — without each re-running the forecast. That pick is stored on-chain and shown in the frontend next to the crowd's pari-mutuel pools.
+`ai_predictor.py` is a separate, single contract for the whole season. Before a match, it asks the network for a *prediction*, using the **non-comparative** equivalence principle:
 
 ```python
 raw = gl.eq_principle.prompt_non_comparative(
-    gather_evidence,
-    task="...",
-    criteria="...",
+    gather_evidence,           # returns the input the LLM reasons over
+    task="...",                # "predict this fixture's outcome"
+    criteria="...",            # "is this a defensible home/draw/away call?"
 )
 ```
 
+The leader validator produces a pick + confidence + one-line reason; the other validators judge whether that answer is defensible against fixed criteria, rather than each re-running the whole forecast. This is deliberately lighter on Bradbury's small validator set than forcing every validator to independently re-predict, and "is this call reasonable?" is the right question to reach consensus on for a subjective judgement. The pick is parsed and normalized deterministically after consensus so a stray capital letter or code fence can't revert a good prediction.
+
+> **Note on the two equivalence principles:** resolution uses `strict_eq` (there is one correct score); the AI Call uses `prompt_non_comparative` (a prediction is a judgement). Getting this distinction right was the difference between the AI Call working and silently never storing anything.
+
+### What this replaces
+
 | Traditional approach | This project |
 |---|---|
-| Chainlink + paid feed for sports scores | Free, direct from BBC Sport |
-| Custom backend pushing results | No backend, contract self-resolves |
-| Manual admin clicks to resolve | Fully autonomous via cron |
-| Single trusted oracle | Multiple validators reach consensus |
+| Chainlink or a paid feed for sports scores | Free, read directly from BBC Sport |
+| A backend service pushing results on-chain | No backend — the contract resolves itself |
+| An admin clicking "resolve" | Fully autonomous, driven by cron |
+| A single trusted oracle | Multiple validators reaching consensus |
 
 ---
 
 ## Architecture
 
 ```
-Frontend (vanilla JS)  --read-->  Supabase (mirror of on-chain state)
-        |                                  ^
-        +--write via wallet--> GenLayer    |
-                              Contracts    |
-                                  ^        |
-                                  |        |
-                       resolve()  |   live-scores cron
-                                  |   (football-data.org → Supabase)
-              +-------------------+
-              |
-       Cron endpoints (Vercel + cron-job.org)
-       /api/resolve-matches  — every 10 min
-       /api/predict-matches  — every 30 min (AI Call)
-       /api/standings        — every 3 hours
-       /api/live-scores      — every 5 min
+                 ┌────────────────────────────────────────────┐
+                 │  Frontend (epl27-predict.vercel.app)         │
+                 │  reads mirror ▼        writes via wallet ▼    │
+                 └──────────┬──────────────────────┬────────────┘
+                            │                       │
+                   Supabase (read-mirror)     GenLayer Bradbury
+                            ▲                  ┌──────────────────┐
+                            │                  │ 50 market        │
+                            │                  │ contracts (MD1-5)│
+        ┌───────────────────┴───────┐          │ 1 AI predictor   │
+        │  Cron (epl27-predict-cron) │─writes──▶└──────────────────┘
+        │  /api/resolve-matches  10m │             ▲
+        │  /api/predict-matches  30m │─────────────┘
+        │  /api/standings         3h │──▶ BBC Sport (league table)
+        │  /api/live-scores       5m │──▶ football-data.org (live scores)
+        └────────────────────────────┘
+        scheduled by cron-job.org (Bearer CRON_SECRET)
 ```
 
-### Components
-
-- **`prediction_market.py`** — Intelligent Contract, one per match. Pari-mutuel pools, BBC Sport resolution via LLM consensus, claim/refund paths.
-- **`ai_predictor.py`** — Single Intelligent Contract for the whole season. Stores GenLayer's own predicted pick per fixture before kickoff.
-- **`deploy.js`** — Deploys market contracts matchday by matchday, resumable via checkpoint. `--matchday N` flag for targeted runs.
-- **`generate_fixtures.py`** — Pulls live fixture data from football-data.org and writes `fixtures.json`.
-- **`fixtures.json`** — All 50 matchday 1–5 fixtures (real 2026/27 teams, kickoff times from football-data.org).
-- **`frontend/`** — Vanilla HTML/CSS/JS, no build step. Match list, match detail, AI Call badge, live PL table, My Picks, Leaderboard.
-- **`cron/api/live-scores.js`** — Pulls live scores from football-data.org, mirrors to Supabase, broadcasts via Ably.
-- **`cron/api/resolve-matches.js`** — Submits `resolve()` calls after matches end; polls LLM consensus in later ticks.
-- **`cron/api/predict-matches.js`** — Submits `predict()` to AIPredictor ~1 day before kickoff; polls for finalized picks.
-- **`cron/api/standings.js`** — Pulls the live PL table from football-data.org, mirrors to Supabase.
-- **Supabase** — Read-mirror of on-chain state. Frontend reads Supabase for sub-second loads; contracts remain the source of truth.
+**Trust flow:** the contracts are the source of truth. Cron writes to the contracts and mirrors public state into Supabase. The frontend reads Supabase for speed and reads the contracts directly for pools; it only ever writes through the user's own wallet.
 
 ---
 
-## Market contract
-
-```python
-submit_prediction(pick)   # payable; min 2 GEN; pick in {home, draw, away}
-resolve()                 # triggers LLM consensus on BBC Sport
-claim()                   # pari-mutuel payout to winning predictors
-refund()                  # refund path when winning pool is 0% or 100%
-mark_postponed()          # admin-only escape hatch
-```
-
-### Payout formula
+## Repository layout
 
 ```
-payout = stake × (total_pool / winning_pool)
+epl27-predict/
+├── prediction_market.py      # per-match Intelligent Contract (pari-mutuel + BBC resolution)
+├── ai_predictor.py           # single AI Call contract (pre-match predictions)
+├── deploy.js                 # deploys market contracts (--matchday N, resumable checkpoint)
+├── deploy-ai.js              # deploys the AI predictor (one-time)
+├── generate_fixtures.py      # pulls real 2026/27 fixtures from football-data.org → fixtures.json
+├── fixtures.json             # MD1–5, 50 fixtures with kickoff times + external IDs
+├── schema.sql                # complete Supabase schema + RLS (single paste)
+├── frontend/                 # canonical app — vanilla HTML/CSS/JS, no build step
+│   ├── index.html
+│   ├── app.js                # router, match list, match detail, My Picks, Leaderboard, Table
+│   ├── lib/
+│   │   ├── config.js         # Bradbury params + Supabase publishable key
+│   │   ├── wallet.js         # EIP-6963 wallet chooser + chain guard
+│   │   ├── contract.js       # genlayer-js reads/writes against markets
+│   │   ├── supabase.js       # read-mirror queries
+│   │   └── crests.js         # club crest mapping (football-data CDN)
+│   └── style.css             # EPL purple/magenta theme, light + dark
+├── web/                      # secondary Next.js + RainbowKit build of the same app
+└── cron/
+    ├── api/resolve-matches.js
+    ├── api/predict-matches.js
+    ├── api/standings.js
+    ├── api/live-scores.js
+    └── vercel.json
 ```
-
-No house cut. No rake. Winners split the whole pool pro-rata.
-
-### Read views
-
-```python
-get_match_info()           -> {team1, team2, game_date, status, result, final_score, admin}
-get_pools()                -> {home, draw, away, total}
-get_my_prediction(user)    -> {has_predicted, pick, stake, claimed}
-expected_payout(user)      -> u256
-```
-
-### Refund edge cases
-
-- **0% of the pool** picked correctly → refund everyone
-- **100% of the pool** picked correctly → refund everyone
-
-No balance is ever stuck in the contract.
 
 ---
 
-## AI Call contract
+## The market contract (`prediction_market.py`)
+
+One deployed instance per fixture. Immutable — team names and date are set in the constructor and never change.
 
 ```python
-predict(match_id, home, away, date)   # admin/cron only; idempotent per fixture
-reset(match_id)                       # admin: clear a prediction to re-run
-set_source(url)                       # admin: update the evidence source
+submit_prediction(pick)   # payable; min 2 GEN; pick ∈ {home, draw, away}; one per wallet
+resolve()                 # reads BBC Sport, reaches consensus, settles the pools
+claim()                   # winning predictor pulls their pari-mutuel share
+refund()                  # reclaim stake when a match goes to the refund path
+mark_postponed()          # admin-only escape hatch → refund path
 ```
 
-### Read views
+**Payout:**
+
+```
+payout = your_stake × (total_pool / winning_pool)
+```
+
+No cut is taken. The winning side splits the entire pot in proportion to stake.
+
+**Read views** (used by the UI): `get_match_info()`, `get_pools()`, `get_my_prediction(user)`, `expected_payout(user)`, `get_contract_balance()`.
+
+**Refund edge cases** — either of these routes everyone to `refund()` so nothing is ever stuck:
+- **Nobody** picked the winning outcome (winning pool = 0).
+- **Everybody** picked the winning outcome (winning pool = whole pot), which would otherwise be a no-op payout.
+
+---
+
+## The AI Call contract (`ai_predictor.py`)
+
+A single contract for the entire season, keyed by the same `match_id` the markets use so the two line up in the UI.
 
 ```python
-get_prediction(match_id)   -> {has_prediction, match_id, home, away, date, pick, confidence, reason}
-has_prediction(match_id)   -> bool
-get_source()               -> str
+predict(match_id, home, away, date)   # admin/cron only, idempotent per fixture
+reset(match_id)                        # admin: clear a prediction to re-run it
+set_source(url)                        # admin: change the evidence source
+get_prediction(match_id)               # → {has_prediction, pick, confidence, reason, ...}
+has_prediction(match_id) / get_source()
 ```
+
+It holds no funds and never pays out — its blast radius is zero. It exists purely to publish GenLayer's own read on each match before kickoff.
 
 **Deployed at:** `0xa9d1dfA3cC8F9B566F823D2d6e7bCaA45aAE2Be2` (Bradbury)
 
 ---
 
-## Network
+## Data & the cron backend
 
-- **GenLayer Bradbury testnet** (chain ID 4221)
-- RPC: `https://rpc-bradbury.genlayer.com`
-- Explorer: [explorer-bradbury.genlayer.com](https://explorer-bradbury.genlayer.com)
-- Faucet: [testnet-faucet.genlayer.foundation](https://testnet-faucet.genlayer.foundation)
+Bradbury reads only reflect **finalized** state, which can lag minutes to hours, so a small cron layer keeps the mirror fresh and drives the autonomous behaviour. All four endpoints require an `Authorization: Bearer <CRON_SECRET>` header and are pinged by [cron-job.org](https://cron-job.org):
 
-50 market contracts deployed for MD1–5. All non-upgradeable.
+| Endpoint | Cadence | What it does |
+|---|---|---|
+| `/api/resolve-matches` | ~10 min | Submits `resolve()` for finished matches; polls consensus on later ticks; retries stuck ones |
+| `/api/predict-matches` | ~30 min | Fires `predict()` on the AI contract ~1 day before kickoff; mirrors stored picks |
+| `/api/standings` | ~3 hours | Scrapes the **BBC Sport** league table → `standings` |
+| `/api/live-scores` | ~5 min | Pulls live scores from football-data.org, mirrors + broadcasts via Ably |
+
+**On standings:** I originally pulled the table from football-data.org, but its free tier serves *stale prior-season* standings until the new season actually kicks off — it was showing relegated clubs and 38 games played. I switched `standings.js` to scrape BBC Sport directly (the same source the contracts resolve against), which carries the correct 2026/27 clubs. Crests are mapped onto the football-data CDN so badges match the rest of the app.
+
+**Supabase** holds `matches`, `pools`, `users`, `predictions`, `resolutions_log`, `standings`, and `ai_predictions`. RLS allows public reads and the specific writes the frontend needs (mirroring your own prediction after you sign it); everything else is service-key only. `schema.sql` sets all of it up in one paste.
 
 ---
 
-## Running locally
+## Frontend & wallet
 
-```powershell
-# 1. Install deps
+The canonical frontend (`frontend/`) is deliberately plain: vanilla HTML/CSS/JS, no framework, no build step. Hash router, five views — **Matches**, **Match detail** (with pools + the AI Call panel), **Table**, **My Picks**, **Leaderboard** — in an EPL purple/magenta theme with light and dark modes.
+
+**Wallet connection** was the hardest part to get right, and worth explaining because it's a common GenLayer footgun:
+
+- Connection uses an **EIP-6963 wallet chooser** — every installed extension (MetaMask, OKX, Phantom, Rabby, …) announces itself and the user explicitly picks one, instead of the app guessing at `window.ethereum`. With several wallets installed, guessing signs from the wrong account.
+- Before any signed transaction, the app **forces the wallet onto Bradbury (chain 4221)** — trying `wallet_switchEthereumChain`, adding the network on 4902/-32603, then re-reading `eth_chainId` to *verify* rather than trusting the promise.
+- Critically, the chosen provider is passed to genlayer-js as a **top-level `provider`** on `createClient`. genlayer-js builds its own transport and ignores a viem-style `transport` key — passing it the wrong way makes it silently fall back to `window.ethereum`, which is what caused both the "wrong wallet" bug and a `Wallet is on chain 61999 but client is configured for chain 4221` error at signing. Passing `provider` top-level makes the chain check *and* the signature use the exact wallet you picked.
+
+`web/` is a secondary Next.js + RainbowKit build of the same app for anyone who prefers that stack. Both talk to the identical contracts and Supabase project.
+
+---
+
+## Running it locally
+
+```bash
+# 1. Install
 npm install
 
-# 2. Set env vars
-Copy-Item .env.example .env
-# Fill in PRIVATE_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY,
-# FOOTBALL_DATA_API_KEY, CRON_SECRET, ABLY_API_KEY
+# 2. Configure
+cp .env.example .env      # fill in the vars below
 
-# 3. Generate fixtures (pulls live from football-data.org)
+# 3. Generate the fixtures (live from football-data.org)
 python generate_fixtures.py
 
-# 4. Deploy market contracts (resumable; ~2 min per contract on Bradbury)
-node deploy.js --matchday 1   # one matchday at a time
-node deploy.js                 # or all at once
+# 4. Set up Supabase — paste schema.sql into the SQL editor once
 
-# 5. Deploy AI Call contract (one-time)
-node deploy-ai.js
+# 5. Deploy contracts (resumable; a matchday at a time keeps runs short)
+node deploy.js --matchday 1
+node deploy.js               # or every remaining fixture
+node deploy-ai.js            # the AI Call contract (one-time)
 
-# 6. Frontend (vanilla JS, no build step)
-cd frontend
-python -m http.server 8080
+# 6. Frontend (no build step)
+cd frontend && python -m http.server 8080
 
-# 7. Cron endpoints (Vercel)
-cd cron
-vercel deploy --prod
+# 7. Cron endpoints
+cd cron && vercel deploy --prod
 ```
 
-Required env vars:
+**Server env (`.env`):**
 
 ```
-PRIVATE_KEY              # deploy + resolve + predict wallet (must be AIPredictor admin)
+PRIVATE_KEY              # deploy + resolve + predict wallet (must be the AI contract admin)
 AI_PREDICTOR_ADDRESS     # deployed AIPredictor address
 SUPABASE_URL             # EPL Supabase project URL
-SUPABASE_SERVICE_KEY     # sb_secret_… (cron writes)
-FOOTBALL_DATA_API_KEY    # live scores + standings (free at football-data.org)
+SUPABASE_SERVICE_KEY     # sb_secret_… — backend/cron only, bypasses RLS
+FOOTBALL_DATA_API_KEY    # fixtures + live scores (free at football-data.org)
 ABLY_API_KEY             # real-time score broadcast
-CRON_SECRET              # bearer token for cron-job.org pings
+CRON_SECRET              # bearer token cron-job.org sends to the endpoints
 ```
 
-Frontend (`frontend/lib/config.js`) also needs the Supabase **publishable** key (`sb_publishable_…`) — the read-only key safe to ship in the browser.
+The frontend also needs the Supabase **publishable** key (`sb_publishable_…`) in `frontend/lib/config.js` — the RLS-restricted key that's safe to ship in the browser.
 
 ---
 
-## Schema
+## What works today
 
-Run `schema.sql` once in the Supabase SQL editor to create all tables (`matches`, `pools`, `users`, `predictions`, `resolutions_log`, `standings`, `ai_predictions`) with correct RLS policies.
+- ✅ **50 market contracts** live on Bradbury for matchdays 1–5 (21 Aug – 20 Sep 2026), deployed via a resumable checkpoint.
+- ✅ **AI Call contract** deployed; pre-match predictions fire and store on-chain.
+- ✅ **Staking works end-to-end** — connect wallet → pick a side → sign → the 2 GEN stake lands on-chain with the correct value (verified on the Bradbury explorer).
+- ✅ **Wallet chooser** across MetaMask / OKX / Phantom / Rabby, with automatic Bradbury network switching.
+- ✅ **My Picks & Leaderboard** — pulling your predictions and ranking predictors (client-side joins, no fragile PostgREST embeds).
+- ✅ **Live Premier League table** from BBC Sport with the correct 2026/27 clubs, refreshing every ~3 hours.
+- ✅ **Resolution, prediction, standings and live-score crons** deployed and scheduled.
+- ✅ **Supabase mirror** with full schema + RLS.
+
+## Known limitations / honest caveats
+
+- **Bradbury finality is slow and occasionally stalls.** A stake can sit in `PROPOSING` for minutes to hours before it finalizes, so pools and My Picks update on a lag — and during a network stall (I hit one mid-build) nothing finalizes until validators recover. This is the testnet, not the app.
+- **Only MD1–5 are deployed.** The remaining matchdays (6–38) are a rolling deployment as the season progresses.
+- **AI Call badges are sparse until close to kickoff** — the cron only predicts a fixture ~1 day before it's played (or when I fire it manually).
+- **Pre-season the table and leaderboard read zeros** — correct behaviour before any match is played; they fill in once results come in.
+- **Resolution depends on BBC Sport's page** staying scrapeable; a big markup change there would need the parser updated.
+- **Testnet only.** GEN here has no real value. Nothing about this is financial advice or a real-money product.
+
+---
+
+## Roadmap
+
+- [x] MD1–5 (50 contracts) deployed on Bradbury
+- [x] AI Call contract + auto-predict cron
+- [x] BBC-sourced live league table
+- [x] Resolution cron with two-phase consensus polling + retry
+- [x] Live scores cron + Supabase mirror
+- [x] Wallet chooser, chain-switch guard, end-to-end staking
+- [x] Match list, match detail, AI Call, Table, My Picks, Leaderboard
+- [ ] Roll out MD6→MD38 as the season runs
+- [ ] Surface live scores in the UI in real time via Ably (cron already broadcasts)
+- [ ] Cross-check resolution against a second source (BBC + ESPN) for extra safety
+- [ ] Custom domain
 
 ---
 
 ## Built with
 
-- **GenLayer** — Intelligent Contracts (Python), LLM consensus, web rendering
-- **genlayer-js** — TypeScript SDK for deploys and reads
-- **Vercel** — frontend hosting + serverless cron endpoints
-- **Supabase** — Postgres read-mirror for fast frontend
-- **cron-job.org** — sub-daily cron pings (Vercel free tier only runs daily)
-- **Ably** — real-time score broadcasts
-- **football-data.org** — fixtures, live scores, standings API
-- **Vanilla HTML/CSS/JS** — no framework, no build step on the frontend
-- **OKX Wallet / MetaMask** — EIP-1193 wallet integration
+**GenLayer** (Intelligent Contracts in Python, LLM consensus, in-contract web rendering) · **genlayer-js** · **Vercel** (frontend + serverless cron) · **Supabase** (Postgres read-mirror) · **cron-job.org** (sub-daily scheduling) · **Ably** (real-time broadcasts) · **football-data.org** (fixtures + live scores) · **BBC Sport** (resolution + league table) · **RainbowKit + wagmi** (the Next.js build) · **vanilla HTML/CSS/JS** (the canonical frontend).
 
 ---
 
-## Season roadmap
-
-- [x] MD1–5 (50 contracts) deployed on Bradbury
-- [x] AI Call contract deployed; one prediction verified end-to-end
-- [x] Live scores cron + Supabase mirror
-- [x] Resolution cron with two-phase LLM polling + retry
-- [x] Auto-predict cron (~1 day before kickoff)
-- [x] Live PL table tab (football-data.org → Supabase)
-- [x] Frontend: match list, AI Call badge, Table tab, My Picks, Leaderboard
-- [ ] MD6+ contracts (rolling deployment each matchday)
-- [ ] Real-time score updates via Ably in the frontend
-- [ ] Multi-source cross-check on resolution (BBC + ESPN)
-
----
-
-Built by [@Afghanistan8](https://github.com/Afghanistan8) ([@Asuzu_a](https://twitter.com/Asuzu_a)).
+Built by [@Afghanistan8](https://github.com/Afghanistan8) ([@Asuzu_a](https://twitter.com/Asuzu_a)) — testnet only, no real value.
