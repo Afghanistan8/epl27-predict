@@ -29,6 +29,7 @@ import {
 import {
   readPools,
   readMyPrediction,
+  readMatchInfo,
   computeExpectedPayout,
   submitPrediction,
   claim,
@@ -396,6 +397,18 @@ async function renderMatchDetail(matchId) {
     console.warn('pool read failed:', e.message);
     currentPools = { home: 0n, draw: 0n, away: 0n, total: 0n };
   }
+
+  // Authoritative status/result from the CONTRACT (not the mirror), so the
+  // Claim/Refund buttons only enable when the chain actually says so — a stale
+  // Supabase row can never surface a button that would revert.
+  try {
+    const info = await readMatchInfo(currentMatch.contract_address);
+    if (info && info.status) {
+      currentMatch.status = info.status;                 // 'open'|'resolved'|'refunding'
+      currentMatch.result = info.result || currentMatch.result;
+      if (info.final_score) currentMatch.final_score = info.final_score;
+    }
+  } catch (e) { console.warn('on-chain match info read failed:', e.message); }
 
   // AI Call for this fixture (from Supabase mirror; may be null pre-kickoff).
   try {
