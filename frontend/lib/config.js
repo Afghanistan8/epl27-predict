@@ -21,3 +21,9 @@ export const STUDIONET = {
 };
 
 export const MIN_STAKE_GEN = 2;
+
+// Secure mirror API (Vercel cron project). Writes to Supabase are no longer
+// done from the browser — they go through these endpoints, which verify the
+// claim against the contract (or a wallet signature) before writing. This is
+// what stops anyone forging leaderboard / prediction rows with the public key.
+export const MIRROR_API_BASE = 'https://epl27-predict-cron.vercel.app';

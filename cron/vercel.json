@@ -26,6 +26,12 @@
     },
     "api/predict-matches.js": {
       "maxDuration": 60
+    },
+    "api/mirror-prediction.js": {
+      "maxDuration": 30
+    },
+    "api/set-username.js": {
+      "maxDuration": 15
     }
   }
 }

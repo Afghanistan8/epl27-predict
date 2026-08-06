@@ -24,9 +24,11 @@ import {
   getStandings,
   getAIPredictionsMap,
   getAIPrediction,
+  mirrorPrediction,
 } from './lib/supabase.js';
 import {
   readPools,
+  readMyPrediction,
   computeExpectedPayout,
   submitPrediction,
   claim,
@@ -214,14 +216,29 @@ let cachedMatches = null;
 let cachedAIPreds = {};
 let currentFilter = 'upcoming';
 
+// Never let a hung network freeze the UI on the "Loading…" placeholder.
+function withTimeout(promise, ms, fallback) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
+
 async function loadMatches() {
-  try { cachedMatches = await getMatches(); }
-  catch (e) { console.error(e); cachedMatches = []; showToast("Couldn't load matches", 'error'); }
+  try {
+    cachedMatches = await withTimeout(getMatches(), 8000, null);
+    if (cachedMatches === null) throw new Error('timed out');
+  } catch (e) {
+    console.error('loadMatches:', e);
+    cachedMatches = [];
+    showToast("Couldn't load matches — retrying is safe", 'error');
+  }
   return cachedMatches;
 }
 
 async function loadAIPreds() {
-  try { cachedAIPreds = await getAIPredictionsMap(); }
+  // Decorative only — must never block or fail the match list.
+  try { cachedAIPreds = (await withTimeout(getAIPredictionsMap(), 6000, {})) || {}; }
   catch (e) { console.warn('AI preds load failed:', e.message); cachedAIPreds = {}; }
   return cachedAIPreds;
 }
@@ -240,23 +257,42 @@ function filterMatches(matches, filter) {
 }
 
 async function renderHome() {
-  if (!cachedMatches) await loadMatches();
-  await loadAIPreds();
-  const matches = cachedMatches || [];
-  document.getElementById('stat-matches').textContent = matches.length || '—';
-  // Get total predictions from supabase
-  try {
-    const { count, error } = await sb.from('predictions').select('*', { count: 'exact', head: true });
-    if (!error) document.getElementById('stat-predictions').textContent = count || '0';
-  } catch {}
-  document.getElementById('stat-volume').textContent = '0';
-  const filtered = filterMatches(matches, currentFilter);
   const list = document.getElementById('match-list');
-  if (!filtered.length) {
-    list.innerHTML = `<div class="empty-state">No matches to show for "${currentFilter}".</div>`;
-    return;
+  try {
+    if (!cachedMatches) await loadMatches();
+    await loadAIPreds();
+    const matches = cachedMatches || [];
+    document.getElementById('stat-matches').textContent = matches.length || '0';
+    // Total predictions (best-effort; never blocks the list).
+    try {
+      const { count, error } = await withTimeout(
+        sb.from('predictions').select('*', { count: 'exact', head: true }),
+        5000, { count: null, error: true }
+      );
+      if (!error) document.getElementById('stat-predictions').textContent = count || '0';
+    } catch {}
+    document.getElementById('stat-volume').textContent = '0';
+
+    const filtered = filterMatches(matches, currentFilter);
+    if (!filtered.length) {
+      list.innerHTML = `<div class="empty-state">${emptyStateMessage(matches)}</div>`;
+      return;
+    }
+    list.innerHTML = filtered.map(matchCardHtml).join('');
+  } catch (e) {
+    // Last-resort guard: never leave the hardcoded "Loading matches…" text.
+    console.error('renderHome failed:', e);
+    list.innerHTML = `<div class="empty-state">Couldn't load matches right now. Please refresh in a moment.</div>`;
   }
-  list.innerHTML = filtered.map(matchCardHtml).join('');
+}
+
+// Friendly, context-aware empty state (pre-season vs. a filter with no hits).
+function emptyStateMessage(matches) {
+  if (!matches.length) {
+    return 'No markets are live yet — the 2026/27 season kicks off Fri 21 Aug 2026. Check back soon.';
+  }
+  const labels = { today: 'today', upcoming: 'upcoming', live: 'live now', finished: 'finished' };
+  return `No ${labels[currentFilter] || currentFilter} matches to show right now.`;
 }
 
 // Small inline badge showing GenLayer's own pre-match call.
@@ -367,11 +403,31 @@ async function renderMatchDetail(matchId) {
     if (ai) cachedAIPreds[matchId] = ai;
   } catch (e) { console.warn('AI pred read failed:', e.message); }
 
-  // Read my prediction from Supabase (not from contract — contract read fails)
+  // Read my prediction. The CHAIN is the source of truth; Supabase is a mirror.
+  // Prefer the on-chain read, and if the chain shows a prediction the mirror
+  // hasn't captured yet (Bradbury finality lag), self-heal by asking the secure
+  // mirror endpoint to sync it — no direct browser write involved.
   const state = getWalletState();
   myPrediction = null;
   if (state.address) {
-    myPrediction = await readMyPredictionFromSupabase(matchId, state.address);
+    let onchain = null;
+    try { onchain = await readMyPrediction(currentMatch.contract_address, state.address); }
+    catch (e) { console.warn('on-chain prediction read failed:', e.message); }
+
+    const mirrored = await readMyPredictionFromSupabase(matchId, state.address);
+
+    if (onchain) {
+      // Merge: chain gives pick/stake/claimed; mirror may add refunded flag.
+      myPrediction = {
+        pick: onchain.pick,
+        stake: onchain.stake,
+        claimed: onchain.claimed,
+        refunded: mirrored?.refunded ?? false,
+      };
+      if (!mirrored) mirrorPrediction(matchId, state.address, 'predict').catch(() => {});
+    } else {
+      myPrediction = mirrored;
+    }
   }
 
   el.innerHTML = matchDetailHtml(currentMatch, currentPools, myPrediction, state);
@@ -609,18 +665,12 @@ function attachMatchDetailEvents() {
       const { txHash } = await submitPrediction(currentMatch.contract_address, currentPick, stake);
       submitBtn.textContent = 'Submitting…';
 
-      // Mirror to Supabase — properly check for error
-      const insertResult = await sb.from('predictions').insert({
-        match_id: currentMatch.match_id,
-        user_address: state.address,
-        pick: currentPick,
-        stake_wei: toWei(stake).toString(),
-        tx_hash: txHash,
-        contract_address: currentMatch.contract_address,
-      });
-      if (insertResult.error) {
-        console.error('Supabase insert error:', insertResult.error);
-        showToast(`Prediction succeeded on-chain but mirror failed: ${insertResult.error.message}`, 'error');
+      // Mirror via the secure endpoint — it verifies the stake on-chain before
+      // writing, so the browser never needs Supabase write access.
+      const mirror = await mirrorPrediction(currentMatch.match_id, state.address, 'predict');
+      if (!mirror.ok) {
+        console.error('mirror error:', mirror.error);
+        showToast(`Prediction is on-chain; the mirror will catch up shortly.`, 'error');
       } else {
         showToast(`Prediction submitted: ${currentPick.toUpperCase()} · ${stake} GEN`);
       }
@@ -637,8 +687,8 @@ function attachMatchDetailEvents() {
   document.getElementById('claim-btn')?.addEventListener('click', async (e) => {
     e.target.disabled = true; e.target.textContent = 'Claiming…';
     try {
-      const { txHash } = await claim(currentMatch.contract_address);
-      await sb.from('predictions').update({ claimed: true, claim_tx_hash: txHash }).eq('match_id', currentMatch.match_id).ilike('user_address', getWalletState().address);
+      await claim(currentMatch.contract_address);
+      await mirrorPrediction(currentMatch.match_id, getWalletState().address, 'claim');
       showToast('Winnings claimed! 🎉');
       await renderMatchDetail(currentMatch.match_id);
     } catch (err) { showToast(err.message || 'Claim failed', 'error'); e.target.disabled = false; e.target.textContent = 'Claim winnings'; }
@@ -647,8 +697,8 @@ function attachMatchDetailEvents() {
   document.getElementById('refund-btn')?.addEventListener('click', async (e) => {
     e.target.disabled = true; e.target.textContent = 'Refunding…';
     try {
-      const { txHash } = await refund(currentMatch.contract_address);
-      await sb.from('predictions').update({ refunded: true, refund_tx_hash: txHash }).eq('match_id', currentMatch.match_id).ilike('user_address', getWalletState().address);
+      await refund(currentMatch.contract_address);
+      await mirrorPrediction(currentMatch.match_id, getWalletState().address, 'refund');
       showToast('Refund claimed');
       await renderMatchDetail(currentMatch.match_id);
     } catch (err) { showToast(err.message || 'Refund failed', 'error'); e.target.disabled = false; e.target.textContent = 'Claim refund'; }

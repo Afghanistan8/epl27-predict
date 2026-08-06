@@ -137,13 +137,22 @@ begin
   end loop;
 end $$;
 
--- Frontend (publishable key) writes its own mirror rows for predictions + users.
+-- WRITES ARE SERVICE-ROLE ONLY.
+--
+-- The publishable/anon key can SELECT but can NOT insert or update anything.
+-- Earlier this project granted public INSERT/UPDATE on predictions + users so
+-- the browser could mirror a stake directly — but that let anyone forge
+-- leaderboard rows with the publishable key. Removed.
+--
+-- All writes now go through the /api/mirror-prediction endpoint, which reads
+-- the contract (the real source of truth) with the SERVICE key and only writes
+-- what the chain already proves. The service role bypasses RLS, so no public
+-- write policy is needed — and none should exist.
+
+-- Explicitly drop the old public write policies in case this runs on a project
+-- that still has them from a previous version of this file.
 drop policy if exists "predictions public insert" on public.predictions;
-create policy "predictions public insert" on public.predictions for insert with check (true);
 drop policy if exists "predictions public update" on public.predictions;
-create policy "predictions public update" on public.predictions for update using (true) with check (true);
+drop policy if exists "users public insert"       on public.users;
 
-drop policy if exists "users public insert" on public.users;
-create policy "users public insert" on public.users for insert with check (true);
-
--- resolutions_log has no public policy => only the secret key (bypasses RLS) touches it.
+-- resolutions_log has no public policy => only the service key touches it.

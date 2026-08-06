@@ -1,13 +1,14 @@
 /* lib/supabase.js
  *
- * Supabase client used throughout the app for read-only queries
- * (and the one user-row insert when picking a username).
- *
- * Uses the publishable key, which is rate-limited and restricted by RLS.
+ * Supabase client used for READ-ONLY queries via the publishable key.
+ * All WRITES go through the secure mirror API (see mirror.js) — the browser
+ * has no insert/update permission on Supabase anymore, which is what stops
+ * forged leaderboard / prediction rows.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './config.js';
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, MIRROR_API_BASE } from './config.js';
+import { getActiveProvider } from './wallet.js';
 
 export const sb = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: { persistSession: false },
@@ -29,14 +30,24 @@ export async function getUsername(address) {
   return data?.username ?? null;
 }
 
+// Claim a username by SIGNING a message with the wallet — the /api/set-username
+// endpoint verifies the signature server-side before writing. No direct insert.
 export async function createUser(address, username) {
-  const { data, error } = await sb
-    .from('users')
-    .insert({ user_address: address, username })
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
+  const provider = getActiveProvider();
+  if (!provider) throw new Error('Connect a wallet first.');
+  const message = `EPL '27 Predict — claim username: ${username}`;
+  const signature = await provider.request({
+    method: 'personal_sign',
+    params: [message, address],
+  });
+  const resp = await fetch(`${MIRROR_API_BASE}/api/set-username`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ address, username, signature }),
+  });
+  const out = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(out.error || 'Could not save username');
+  return out;
 }
 
 export async function usernameExists(username) {
@@ -50,6 +61,26 @@ export async function usernameExists(username) {
     return false;
   }
   return Boolean(data);
+}
+
+/* ---------- Mirror API (chain-verified writes) ---------- */
+
+// Ask the server to mirror the caller's on-chain state to Supabase. The
+// endpoint reads the contract and only writes what's actually true, so this is
+// safe to call optimistically after any predict/claim/refund tx.
+export async function mirrorPrediction(matchId, address, action) {
+  try {
+    const resp = await fetch(`${MIRROR_API_BASE}/api/mirror-prediction`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ match_id: matchId, user_address: address, action }),
+    });
+    const out = await resp.json().catch(() => ({}));
+    if (!resp.ok) return { ok: false, error: out.error || `mirror failed (${resp.status})` };
+    return { ok: true, ...out };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
 }
 
 /* ---------- Matches ---------- */
