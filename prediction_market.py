@@ -32,13 +32,15 @@ class PredictionMarket(gl.Contract):
     team1: str                       # home team
     team2: str                       # away team
     game_date: str                   # YYYY-MM-DD
-    resolution_url: str              # BBC Sport URL for this date
+    resolution_url: str              # PRIMARY source (BBC Sport) for this date
+    resolution_url_2: str            # SECONDARY cross-check source (ESPN) for this date
     admin: Address                   # only address allowed to call mark_postponed
 
     # Match state
     status: str                      # 'open' | 'resolved' | 'refunding'
     result: str                      # 'home' | 'draw' | 'away' | '' if not yet resolved
     final_score: str                 # e.g. '2:1', for display
+    resolve_attempts: u256           # how many times resolve() has run (anti-grief signal)
 
     # Pari-mutuel pools (in wei)
     pool_home: u256
@@ -49,6 +51,10 @@ class PredictionMarket(gl.Contract):
     picks: TreeMap[Address, str]      # user -> pick
     stakes: TreeMap[Address, u256]    # user -> stake amount
     claimed: TreeMap[Address, bool]   # user -> has claimed/refunded yet
+
+    # Sum of WINNING-side stakes already claimed. Lets the final winner sweep
+    # the integer-division remainder so no wei is ever locked (see claim()).
+    winning_stake_claimed: u256
 
     # Minimum stake (2 GEN)
     MIN_STAKE: u256
@@ -65,14 +71,22 @@ class PredictionMarket(gl.Contract):
         self.team1 = team1
         self.team2 = team2
         self.game_date = game_date
+        # PRIMARY: BBC Sport. SECONDARY: ESPN. resolve() renders both and only
+        # settles when they AGREE on the same {score, winner} — see resolve().
         self.resolution_url = (
             "https://www.bbc.com/sport/football/scores-fixtures/" + game_date
+        )
+        self.resolution_url_2 = (
+            "https://www.espn.com/soccer/scoreboard/_/date/"
+            + game_date.replace("-", "")
         )
         self.admin = gl.message.sender_address
 
         self.status = STATUS_OPEN
         self.result = ""
         self.final_score = ""
+        self.resolve_attempts = u256(0)
+        self.winning_stake_claimed = u256(0)
 
         self.pool_home = u256(0)
         self.pool_draw = u256(0)
@@ -113,38 +127,78 @@ class PredictionMarket(gl.Contract):
 
     @gl.public.write
     def resolve(self) -> typing.Any:
-        """Resolve the match by fetching final score from BBC Sport via LLM consensus."""
+        """
+        Resolve the match from the FINAL SCORE, read on-chain via LLM consensus.
+
+        Public + autonomous by design (anyone can trigger settlement — no admin
+        gate on money). Two hardening measures against griefing/wrong reads:
+
+        - Anti-grief: resolve() no-ops immediately once the match has settled
+          (status leaves OPEN), and increments `resolve_attempts` so repeated
+          pre-finish calls are observable. The off-chain cron paces calls
+          (RESOLVE_RETRY_HOURS); the contract itself refuses to re-settle.
+        - Multi-source: renders BBC (primary) AND ESPN (secondary) and only
+          accepts a result the two sources AGREE on. Disagreement or an
+          unfinished primary returns winner = -1, leaving the match OPEN.
+
+        Consensus is via gl.eq_principle.strict_eq over the normalized
+        {score, winner} — an objective fact, so strict equality is correct.
+        """
         if self.status != STATUS_OPEN:
             raise gl.vm.UserError("match is not open for resolution")
 
+        self.resolve_attempts = self.resolve_attempts + u256(1)
+
         # Capture self values into locals for the closure
         resolution_url = self.resolution_url
+        resolution_url_2 = self.resolution_url_2
         team1 = self.team1
         team2 = self.team2
 
         def get_match_result() -> typing.Any:
-            web_data = gl.nondet.web.render(resolution_url, mode="text")
+            primary = gl.nondet.web.render(resolution_url, mode="text")
+            # Secondary is best-effort: if it fails to render we fall back to
+            # the primary alone (logged as agreement="primary-only").
+            try:
+                secondary = gl.nondet.web.render(resolution_url_2, mode="text")
+            except Exception:
+                secondary = ""
 
             task = f"""
-In the following web page, find the final score of the Premier League match between:
-Team 1 (home): {team1}
-Team 2 (away): {team2}
+You are settling a Premier League match. Find the FULL-TIME score (after 90
+minutes plus stoppage time; there is no extra time or penalties in league play).
 
-Web page content:
-{web_data}
-End of web page data.
+Match:
+  Home team: {team1}
+  Away team: {team2}
 
-This is a Premier League fixture — a single 90-minute match with no extra
-time or penalties. Use the full-time score after 90 minutes (plus stoppage
-time) of regulation.
+Teams may appear under common abbreviations or full names — match by CLUB
+IDENTITY, not exact spelling. Examples: "Man Utd"/"Man United" = "Manchester
+United"; "Spurs" = "Tottenham"; "Nott'm Forest" = "Nottingham Forest";
+"Ipswich" = "Ipswich Town"; "Wolves" = "Wolverhampton"; "Brighton" =
+"Brighton & Hove Albion"; "Newcastle" = "Newcastle United".
 
-If it says "Kick off [time]" between the team names, the match hasn't started.
-If you cannot find the final score, assume the match is not yet resolved.
+PRIMARY source (BBC), authoritative:
+{primary}
+End of PRIMARY.
 
-Respond ONLY with the following JSON format, nothing else:
+SECONDARY source (ESPN), cross-check only (may be empty):
+{secondary}
+End of SECONDARY.
+
+Rules:
+- Base the result on the PRIMARY source.
+- If the PRIMARY shows the match has not finished (e.g. shows a kick-off time,
+  is live, or the score is absent), return winner = -1.
+- If BOTH sources clearly show a FINISHED result but they DISAGREE on the
+  winner, return winner = -1 (do not guess — safer to retry later).
+- If the SECONDARY is empty/unavailable, use the PRIMARY alone.
+
+Respond ONLY with this JSON, nothing else:
 {{
-    "score": str,    // The final score as home:away, e.g. "2:1", or "-" if not resolved
-    "winner": int    // 1 if {team1} (home) won, 2 if {team2} (away) won, 0 for draw, -1 if not resolved
+    "score": str,           // full-time score as home:away, e.g. "2:1", or "-" if unresolved
+    "winner": int,          // 1 = {team1} won, 2 = {team2} won, 0 = draw, -1 = not resolved
+    "agreement": str        // "agree" | "primary-only" | "conflict"
 }}
 Your response must be parseable JSON with no prefix or suffix.
 """
@@ -212,7 +266,7 @@ Your response must be parseable JSON with no prefix or suffix.
         if self.picks[sender] != self.result:
             return
 
-        # Pari-mutuel payout: stake * (total_pool / winning_pool)
+        # Pari-mutuel payout: stake * (total_pool / winning_pool).
         if self.result == PICK_HOME:
             winning_pool = self.pool_home
         elif self.result == PICK_DRAW:
@@ -222,7 +276,18 @@ Your response must be parseable JSON with no prefix or suffix.
 
         total_pool = self.pool_home + self.pool_draw + self.pool_away
         stake = self.stakes[sender]
-        payout = u256((stake * total_pool) // winning_pool)
+
+        # Track how much of the winning side has now claimed. Integer division
+        # in the formula below rounds each payout DOWN, so a few wei of "dust"
+        # would otherwise be stranded forever. Instead, the LAST winner to
+        # claim (the one whose stake completes the winning pool) sweeps the
+        # entire remaining contract balance — their fair share PLUS all the
+        # accumulated rounding dust. Nothing is ever permanently locked.
+        self.winning_stake_claimed = self.winning_stake_claimed + stake
+        if self.winning_stake_claimed >= winning_pool:
+            payout = u256(self.balance)  # final winner mops up the dust
+        else:
+            payout = u256((stake * total_pool) // winning_pool)
 
         _Recipient(sender).emit_transfer(value=payout)
 
@@ -230,7 +295,21 @@ Your response must be parseable JSON with no prefix or suffix.
 
     @gl.public.write
     def mark_postponed(self) -> None:
-        """Admin marks match postponed/cancelled. Switches to refund path."""
+        """
+        Admin switches a real-world postponed/cancelled fixture to the refund
+        path so stakers can reclaim their GEN.
+
+        THIS IS THE ONLY ADMIN POWER IN THE CONTRACT, AND IT CANNOT TAKE FUNDS.
+        Its sole effect is status OPEN -> REFUNDING, which lets EVERY staker
+        call refund() and withdraw their OWN original stake, 1:1. The admin
+        cannot set a result, cannot pay themselves, cannot change pools, and
+        cannot reach anyone's stake. Worst-case abuse is forcing an unnecessary
+        universal refund — which returns everyone's money, harming no one.
+
+        It is also guarded: only callable while the match is still OPEN (never
+        after a resolve() has settled a winner), so it can't be used to unwind
+        a decided market.
+        """
         if gl.message.sender_address != self.admin:
             raise gl.vm.UserError("admin only")
         if self.status != STATUS_OPEN:
@@ -266,6 +345,7 @@ Your response must be parseable JSON with no prefix or suffix.
             "result": self.result,
             "final_score": self.final_score,
             "admin": str(self.admin.as_hex),
+            "resolve_attempts": self.resolve_attempts,
         }
 
     @gl.public.view

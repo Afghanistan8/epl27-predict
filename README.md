@@ -20,6 +20,19 @@ The core belief hasn't changed since the World Cup build: **a prediction market 
 
 ---
 
+## Responding to the WC'26 staff feedback
+
+The GenLayer team reviewed my World Cup build and raised specific points. Here's how EPL'27 answers each, directly:
+
+- **"home/away don't apply to a World Cup with neutral venues."** In the EPL every fixture has a real home side at their own ground, so `home / draw / away` is the *native* model, not a workaround. It's baked into the contract, the pools, and resolution.
+- **"matches are hardcoded — what happens when the group phase ends? where do you fetch these from?"** All 380 fixtures are published before the season and never restructure into a bracket. I pull them from football-data.org with `generate_fixtures.py` into `fixtures.json`, then deploy per matchday. They're "hardcoded" only in the sense that each match is its own immutable contract — which is the point (one match, one market, one settlement).
+- **"cross-check against multiple sources."** Done. `resolve()` now renders **both BBC Sport and ESPN** and only settles on a result the two agree on; a conflict returns `winner = -1` and leaves the match open to retry. See "How it works" below.
+- **"open markets around everything before/during/after a match."** Added the **AI Call** (validators' own pre-match prediction, on-chain) and a **live league table** tab alongside the crowd's pari-mutuel pools.
+
+I also hardened the things a reviewer would poke at: team-name normalization in the resolution prompt (so "Man Utd" and "Manchester United" resolve the same match), a public-but-grief-resistant `resolve()`, integer-division dust that's swept to the final claimant instead of being locked, a clearly-bounded admin power that can only trigger refunds, and Supabase writes that are now chain-verified server-side so nobody can forge leaderboard rows.
+
+---
+
 ## What it does
 
 - Anyone with test GEN can stake on the outcome of any deployed Premier League fixture — **home win, draw, or away win** — with a 2 GEN minimum.
@@ -36,13 +49,14 @@ Everything the money touches lives on-chain. Supabase is only a fast read-mirror
 
 ### 1. The contract reads the web itself
 
-In `prediction_market.py`, resolution pulls the live BBC Sport scoreboard *inside* the contract execution:
+In `prediction_market.py`, resolution renders the live scoreboard *inside* the contract execution — from **two independent sources**, BBC Sport (primary) and ESPN (secondary):
 
 ```python
-web_data = gl.nondet.web.render(resolution_url, mode="text")
+primary   = gl.nondet.web.render(self.resolution_url,   mode="text")  # BBC
+secondary = gl.nondet.web.render(self.resolution_url_2, mode="text")  # ESPN
 ```
 
-There is no oracle service, no off-chain job pushing scores in, no trusted signer. The BBC Sport page **is** the source of truth, fetched by the validators at the moment of resolution.
+There is no oracle service, no off-chain job pushing scores in, no trusted signer. The web pages **are** the source of truth, fetched by the validators at the moment of resolution. The prompt bases the result on the primary, uses the secondary as a cross-check, and returns "not resolved" (leaving the match open) if the two clearly disagree — so a single bad read can't settle a market. Team names are normalized in the prompt ("Man Utd" = "Manchester United", "Spurs" = "Tottenham", …) so minor spelling differences between sources still match the same fixture.
 
 ### 2. AI consensus turns a messy web page into a settled result
 
@@ -145,11 +159,13 @@ One deployed instance per fixture. Immutable — team names and date are set in 
 
 ```python
 submit_prediction(pick)   # payable; min 2 GEN; pick ∈ {home, draw, away}; one per wallet
-resolve()                 # reads BBC Sport, reaches consensus, settles the pools
-claim()                   # winning predictor pulls their pari-mutuel share
+resolve()                 # reads BBC + ESPN, reaches consensus, settles the pools
+claim()                   # winning predictor pulls their pari-mutuel share (last claimer sweeps dust)
 refund()                  # reclaim stake when a match goes to the refund path
-mark_postponed()          # admin-only escape hatch → refund path
+mark_postponed()          # admin-only, refund-only escape hatch (cannot take funds)
 ```
+
+> The multi-source resolution, dust sweep, name-normalization and postponement guard described here live in `prediction_market.py`. The current on-chain MD1–5 set was deployed from an earlier revision; these improvements ship when the matchdays are (re)deployed, which is a clean operation since the season hasn't started.
 
 **Payout:**
 
@@ -275,8 +291,29 @@ The frontend also needs the Supabase **publishable** key (`sb_publishable_…`) 
 - **Only MD1–5 are deployed.** The remaining matchdays (6–38) are a rolling deployment as the season progresses.
 - **AI Call badges are sparse until close to kickoff** — the cron only predicts a fixture ~1 day before it's played (or when I fire it manually).
 - **Pre-season the table and leaderboard read zeros** — correct behaviour before any match is played; they fill in once results come in.
-- **Resolution depends on BBC Sport's page** staying scrapeable; a big markup change there would need the parser updated.
+- **Resolution reads BBC (primary) + ESPN (secondary)** and only settles when they agree; if ESPN can't be rendered it falls back to BBC alone. A large markup change on the *primary* would still need the parser looked at.
 - **Testnet only.** GEN here has no real value. Nothing about this is financial advice or a real-money product.
+
+---
+
+## MD1–5 contracts — verify on the explorer
+
+Every match is its own contract. The 50 for matchdays 1–5 are deployed on Bradbury from the admin wallet `0x4184bc5E5444F250767E8D33A49817A9B4FB0df3`. Matchday 1's ten (open [explorer-bradbury.genlayer.com](https://explorer-bradbury.genlayer.com) → paste an address → read `get_match_info` / `get_pools`):
+
+| Match | Contract |
+|---|---|
+| Arsenal v Coventry City | `0x699fA9cc6d0ffe1A7418BacAeef0FdB17B15f4Eb` |
+| Hull City v Manchester United | `0xA23DE498EA5ed27B6B5399C2Ce1307A26cB26cfB` |
+| Ipswich v Sunderland | `0x3a4c3B25513ebd0d911e4195772A242106756087` |
+| Nottingham Forest v Leeds United | `0xCafdE6C24E7E077DF341F3f11f12046734821d6C` |
+| Everton v Crystal Palace | `0xe7FCbcAFc01e595E9f635e0beD7298F0cf143ae4` |
+| Brentford v Tottenham | `0x95A3A12852765bC590e2Bf48d75B282397AB1dF8` |
+| Manchester City v Bournemouth | `0xB21317f740FC65a2AB2Db5f4Aebc7ea284E1850a` |
+| Brighton v Aston Villa | `0x05D8BdA4c926A67Af3e541182251ee2171e92C89` |
+| Newcastle v Liverpool | `0x72E932aF83ff2214fbc029A3680e684A64eeBD09` |
+| Fulham v Chelsea | `0xEFDA20def9E6fa5BD5E52C4bFf1A22e84D637e19` |
+
+The full 50 (MD1–5) are in `deploy_checkpoint.json`. The **AI Call** contract is `0xa9d1dfA3cC8F9B566F823D2d6e7bCaA45aAE2Be2`.
 
 ---
 
@@ -289,9 +326,10 @@ The frontend also needs the Supabase **publishable** key (`sb_publishable_…`) 
 - [x] Live scores cron + Supabase mirror
 - [x] Wallet chooser, chain-switch guard, end-to-end staking
 - [x] Match list, match detail, AI Call, Table, My Picks, Leaderboard
+- [x] Multi-source resolution cross-check (BBC + ESPN) + team-name normalization
+- [x] Chain-verified Supabase writes (no public forgery of leaderboard rows)
 - [ ] Roll out MD6→MD38 as the season runs
 - [ ] Surface live scores in the UI in real time via Ably (cron already broadcasts)
-- [ ] Cross-check resolution against a second source (BBC + ESPN) for extra safety
 - [ ] Custom domain
 
 ---

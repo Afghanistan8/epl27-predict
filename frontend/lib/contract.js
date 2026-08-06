@@ -42,6 +42,15 @@ async function writeClient() {
 
 /* ---------- helpers ---------- */
 
+// Extract a readable revert reason from a GenLayer tx error. The contract
+// raises gl.vm.UserError with a message; this tries to surface it cleanly.
+function extractRevertReason(err) {
+  const msg = err?.message || String(err);
+  // Common patterns: "execution reverted: <reason>", "UserError: <reason>", or raw
+  const match = msg.match(/(?:reverted:|UserError:)\s*(.+?)(?:\n|$)/i) || msg.match(/^(.+?)$/);
+  return match ? match[1].trim() : 'Transaction failed';
+}
+
 const GEN_DECIMALS = 18n;
 const ONE_GEN = 10n ** GEN_DECIMALS;
 
@@ -164,32 +173,40 @@ export async function submitPrediction(contractAddress, pick, stakeGenAmount) {
 
 export async function claim(contractAddress) {
   const c = await writeClient();
-  const txHash = await c.writeContract({
-    address: contractAddress,
-    functionName: 'claim',
-    args: [],
-  });
-  const receipt = await c.waitForTransactionReceipt({
-    hash: txHash,
-    status: 'ACCEPTED',
-    retries: 60,
-    interval: 5000,
-  });
-  return { txHash, receipt };
+  try {
+    const txHash = await c.writeContract({
+      address: contractAddress,
+      functionName: 'claim',
+      args: [],
+    });
+    const receipt = await c.waitForTransactionReceipt({
+      hash: txHash,
+      status: 'ACCEPTED',
+      retries: 60,
+      interval: 5000,
+    });
+    return { txHash, receipt };
+  } catch (err) {
+    throw new Error(extractRevertReason(err));
+  }
 }
 
 export async function refund(contractAddress) {
   const c = await writeClient();
-  const txHash = await c.writeContract({
-    address: contractAddress,
-    functionName: 'refund',
-    args: [],
-  });
-  const receipt = await c.waitForTransactionReceipt({
-    hash: txHash,
-    status: 'ACCEPTED',
-    retries: 60,
-    interval: 5000,
-  });
-  return { txHash, receipt };
+  try {
+    const txHash = await c.writeContract({
+      address: contractAddress,
+      functionName: 'refund',
+      args: [],
+    });
+    const receipt = await c.waitForTransactionReceipt({
+      hash: txHash,
+      status: 'ACCEPTED',
+      retries: 60,
+      interval: 5000,
+    });
+    return { txHash, receipt };
+  } catch (err) {
+    throw new Error(extractRevertReason(err));
+  }
 }
