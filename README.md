@@ -2,7 +2,9 @@
 
 **A fully on-chain, pari-mutuel prediction market for the 2026/27 English Premier League — settled by AI consensus on [GenLayer](https://genlayer.com) Bradbury testnet, with no oracle, no backend resolver, and no admin keys touching the money.**
 
-🔗 **Live:** [epl27-predict.vercel.app](https://epl27-predict.vercel.app)
+🔗 **Live demos:**
+- Canonical (vanilla): [epl27-predict.vercel.app](https://epl27-predict.vercel.app)
+- Next.js + RainbowKit: [epl27-predict-web.vercel.app](https://epl27-predict-web.vercel.app)
 
 ---
 
