@@ -56,7 +56,7 @@ export default function HomePage() {
         <div className="hero-stats">
           <div className="stat">
             <span className="stat-value">{matches ? matches.length : "—"}</span>
-            <span className="stat-label">matches live</span>
+            <span className="stat-label">matches</span>
           </div>
           <div className="stat">
             <span className="stat-value">{predictionCount ?? "—"}</span>
