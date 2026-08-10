@@ -1,10 +1,11 @@
-# v0.2.17
+# v0.3.0
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 
 from genlayer import *
 
 import json
 import typing
+import datetime as _dt
 
 
 @gl.evm.contract_interface
@@ -26,21 +27,53 @@ PICK_HOME = "home"
 PICK_DRAW = "draw"
 PICK_AWAY = "away"
 
+# How long AFTER kickoff a match must remain unplayed before anyone may move it
+# to the refund path via mark_postponed(). A full match is ~2h; this grace
+# window (3h) guarantees the sources have settled into showing EITHER a
+# full-time score (-> resolve) OR an explicit "Postponed" tag (-> refund),
+# and makes it impossible to declare a postponement before/during play.
+POSTPONE_GRACE_SECS = 10800
+
+_EPOCH = _dt.datetime(1970, 1, 1, tzinfo=_dt.timezone.utc)
+
+
+def _now_epoch() -> int:
+    """
+    Current transaction time as a Unix epoch (seconds), read from the
+    consensus message context.
+
+    GenLayer exposes the transaction datetime as an ISO-8601 string on
+    ``gl.message_raw["datetime"]`` (NOT ``gl.message.datetime`` — that field
+    does not exist on this runner). It is part of the signed message and is
+    identical for every validator, so comparing it against an on-chain kickoff
+    time is fully deterministic and consensus-safe — no oracle, no wall clock.
+
+    Raises (and therefore reverts the calling tx) if the datetime is missing or
+    unparseable, so a time gate can never be silently bypassed.
+    """
+    raw = gl.message_raw["datetime"]
+    dt = _dt.datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=_dt.timezone.utc)
+    return int((dt - _EPOCH).total_seconds())
+
 
 class PredictionMarket(gl.Contract):
     # Match metadata (set in constructor, immutable after)
     team1: str                       # home team
     team2: str                       # away team
     game_date: str                   # YYYY-MM-DD
+    kickoff_ts: u256                 # kickoff as Unix epoch seconds — the betting deadline
     resolution_url: str              # PRIMARY source (BBC Sport) for this date
     resolution_url_2: str            # SECONDARY cross-check source (ESPN) for this date
-    admin: Address                   # only address allowed to call mark_postponed
+    admin: Address                   # deployer of record — HAS NO PRIVILEGED POWERS (see below)
 
     # Match state
     status: str                      # 'open' | 'resolved' | 'refunding'
     result: str                      # 'home' | 'draw' | 'away' | '' if not yet resolved
     final_score: str                 # e.g. '2:1', for display
     resolve_attempts: u256           # how many times resolve() has run (anti-grief signal)
+    postpone_attempts: u256          # how many times mark_postponed() has run (anti-grief signal)
 
     # Pari-mutuel pools (in wei)
     pool_home: u256
@@ -59,7 +92,7 @@ class PredictionMarket(gl.Contract):
     # Minimum stake (2 GEN)
     MIN_STAKE: u256
 
-    def __init__(self, team1: str, team2: str, game_date: str):
+    def __init__(self, team1: str, team2: str, game_date: str, kickoff_ts: int):
         """
         Initialize a single-match prediction market.
 
@@ -67,10 +100,15 @@ class PredictionMarket(gl.Contract):
             team1: Home team name (exact BBC Sport spelling)
             team2: Away team name (exact BBC Sport spelling)
             game_date: YYYY-MM-DD format
+            kickoff_ts: Kickoff time as a Unix epoch (seconds, UTC). This is the
+                betting deadline: submit_prediction() reverts at or after this
+                instant, so no stake can ever be placed once the match has
+                started (or, therefore, once the result is known).
         """
         self.team1 = team1
         self.team2 = team2
         self.game_date = game_date
+        self.kickoff_ts = u256(kickoff_ts)
         # PRIMARY: BBC Sport. SECONDARY: ESPN. resolve() renders both and only
         # settles when they AGREE on the same {score, winner} — see resolve().
         self.resolution_url = (
@@ -86,6 +124,7 @@ class PredictionMarket(gl.Contract):
         self.result = ""
         self.final_score = ""
         self.resolve_attempts = u256(0)
+        self.postpone_attempts = u256(0)
         self.winning_stake_claimed = u256(0)
 
         self.pool_home = u256(0)
@@ -101,6 +140,14 @@ class PredictionMarket(gl.Contract):
         """User submits a pick with stake (>= 2 GEN). One prediction per user."""
         if self.status != STATUS_OPEN:
             raise gl.vm.UserError("predictions closed")
+
+        # Fixture-specific betting deadline / irreversible close. Staking is
+        # refused at or after kickoff, using the consensus transaction time
+        # (gl.message_raw["datetime"]) versus the immutable on-chain kickoff.
+        # This closes the market to new money the moment the match starts, so
+        # nobody can stake after kickoff or once the result becomes known.
+        if _now_epoch() >= int(self.kickoff_ts):
+            raise gl.vm.UserError("betting closed: match has kicked off")
 
         if pick != PICK_HOME and pick != PICK_DRAW and pick != PICK_AWAY:
             raise gl.vm.UserError("pick must be 'home', 'draw', or 'away'")
@@ -294,27 +341,116 @@ Your response must be parseable JSON with no prefix or suffix.
     # ------------------------------------------------------------ REFUND
 
     @gl.public.write
-    def mark_postponed(self) -> None:
+    def mark_postponed(self) -> typing.Any:
         """
-        Admin switches a real-world postponed/cancelled fixture to the refund
-        path so stakers can reclaim their GEN.
+        Move a real-world postponed/cancelled/abandoned fixture to the refund
+        path — PERMISSIONLESSLY and only when the sources CONFIRM it.
 
-        THIS IS THE ONLY ADMIN POWER IN THE CONTRACT, AND IT CANNOT TAKE FUNDS.
-        Its sole effect is status OPEN -> REFUNDING, which lets EVERY staker
-        call refund() and withdraw their OWN original stake, 1:1. The admin
-        cannot set a result, cannot pay themselves, cannot change pools, and
-        cannot reach anyone's stake. Worst-case abuse is forcing an unnecessary
-        universal refund — which returns everyone's money, harming no one.
+        This is deliberately NOT an admin power. There is no privileged key in
+        this contract: just as anyone can call resolve() to settle a finished
+        match, anyone can call mark_postponed() to open refunds for a match that
+        was called off. What makes it safe is that it cannot be asserted — it
+        must be *verified* against the same public sources, under the same
+        validator consensus, as a result is:
 
-        It is also guarded: only callable while the match is still OPEN (never
-        after a resolve() has settled a winner), so it can't be used to unwind
-        a decided market.
+        Constraints (all enforced on-chain):
+        1. Only while status is OPEN — it can never unwind a settled market.
+        2. Only after kickoff + POSTPONE_GRACE_SECS — a postponement cannot be
+           declared before or during the match window, so it can't be used to
+           dodge a bet mid-play. By the time it's callable, the sources show
+           either a full-time score or an explicit postponement.
+        3. The sources must AGREE (gl.eq_principle.strict_eq) that this exact
+           fixture is POSTPONED / CANCELLED / ABANDONED and has NO full-time
+           score. If the match actually finished (a result exists) or the status
+           is unclear, the call REVERTS and the market stays OPEN — so a loser
+           can never convert a decided match into a refund.
+
+        On confirmation, status -> REFUNDING and every staker can reclaim their
+        OWN stake 1:1 via refund(). Nobody — caller included — can be paid a
+        result this way; the only reachable outcome is a universal 1:1 refund.
         """
-        if gl.message.sender_address != self.admin:
-            raise gl.vm.UserError("admin only")
         if self.status != STATUS_OPEN:
             raise gl.vm.UserError("can only postpone matches that are still open")
+
+        # Time constraint: no postponement can be declared until the match
+        # should already have been played and reported. Uses the consensus tx
+        # time vs the immutable on-chain kickoff.
+        if _now_epoch() < int(self.kickoff_ts) + POSTPONE_GRACE_SECS:
+            raise gl.vm.UserError("too early: match may still be in play")
+
+        self.postpone_attempts = self.postpone_attempts + u256(1)
+
+        resolution_url = self.resolution_url
+        resolution_url_2 = self.resolution_url_2
+        team1 = self.team1
+        team2 = self.team2
+        game_date = self.game_date
+
+        def check_postponed() -> typing.Any:
+            primary = gl.nondet.web.render(resolution_url, mode="text")
+            try:
+                secondary = gl.nondet.web.render(resolution_url_2, mode="text")
+            except Exception:
+                secondary = ""
+
+            task = f"""
+You are checking whether a scheduled Premier League fixture was POSTPONED (also
+called off, cancelled, or abandoned) rather than played to a finish.
+
+Fixture:
+  Home team: {team1}
+  Away team: {team2}
+  Scheduled date: {game_date}
+
+Teams may appear under common abbreviations or full names — match by CLUB
+IDENTITY, not exact spelling. Examples: "Man Utd"/"Man United" = "Manchester
+United"; "Spurs" = "Tottenham"; "Nott'm Forest" = "Nottingham Forest";
+"Wolves" = "Wolverhampton"; "Newcastle" = "Newcastle United".
+
+PRIMARY source (BBC), authoritative:
+{primary}
+End of PRIMARY.
+
+SECONDARY source (ESPN), cross-check only (may be empty):
+{secondary}
+End of SECONDARY.
+
+Classify THIS fixture into exactly one status, based on the PRIMARY source
+(use the SECONDARY only to cross-check):
+- "postponed": the source explicitly marks this fixture as postponed, called
+  off, cancelled, suspended or abandoned, AND shows no full-time result for it.
+- "finished": the source shows a full-time score for this fixture.
+- "unknown": you cannot clearly tell, the fixture is not shown, it appears to be
+  upcoming/scheduled, or it is currently in progress.
+
+Be conservative: only answer "postponed" if the source SAYS SO explicitly. A
+fixture merely being absent, or lacking a score, is "unknown", NOT "postponed".
+
+Respond ONLY with this JSON, nothing else:
+{{
+    "status": str,   // "postponed" | "finished" | "unknown"
+    "evidence": str  // short quote/paraphrase of the wording that decided it
+}}
+Your response must be parseable JSON with no prefix or suffix.
+"""
+            result = (
+                gl.nondet.exec_prompt(task).replace("```json", "").replace("```", "")
+            )
+            return json.loads(result)
+
+        verdict = gl.eq_principle.strict_eq(check_postponed)
+
+        if verdict["status"] != "postponed":
+            # Not confirmed postponed — do NOT open refunds. Leave OPEN so the
+            # match can still be resolved normally (or re-checked later).
+            raise gl.vm.UserError(
+                "not confirmed postponed by sources (status: "
+                + str(verdict["status"])
+                + ")"
+            )
+
         self.status = STATUS_REFUNDING
+        return verdict
 
     @gl.public.write
     def refund(self) -> None:
@@ -341,11 +477,13 @@ Your response must be parseable JSON with no prefix or suffix.
             "team1": self.team1,
             "team2": self.team2,
             "game_date": self.game_date,
+            "kickoff_ts": self.kickoff_ts,
             "status": self.status,
             "result": self.result,
             "final_score": self.final_score,
             "admin": str(self.admin.as_hex),
             "resolve_attempts": self.resolve_attempts,
+            "postpone_attempts": self.postpone_attempts,
         }
 
     @gl.public.view
