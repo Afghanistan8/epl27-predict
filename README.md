@@ -31,7 +31,7 @@ The GenLayer team reviewed my World Cup build and raised specific points. Here's
 - **"cross-check against multiple sources."** Done. `resolve()` now renders **both BBC Sport and ESPN** and only settles on a result the two agree on; a conflict returns `winner = -1` and leaves the match open to retry. See "How it works" below.
 - **"open markets around everything before/during/after a match."** Added the **AI Call** (validators' own pre-match prediction, on-chain) and a **live league table** tab alongside the crowd's pari-mutuel pools.
 
-I also hardened the things a reviewer would poke at: team-name normalization in the resolution prompt (so "Man Utd" and "Manchester United" resolve the same match), a public-but-grief-resistant `resolve()`, integer-division dust that's swept to the final claimant instead of being locked, a clearly-bounded admin power that can only trigger refunds, and Supabase writes that are now chain-verified server-side so nobody can forge leaderboard rows.
+I also hardened the things a reviewer would poke at: team-name normalization in the resolution prompt (so "Man Utd" and "Manchester United" resolve the same match), a public-but-grief-resistant `resolve()`, a fixture-specific betting deadline that irreversibly closes staking at kickoff, a permissionless-but-source-verified postponement path (no admin can force a refund — the sources must confirm it), integer-division dust that's swept to the final claimant instead of being locked, and Supabase writes that are now chain-verified server-side so nobody can forge leaderboard rows.
 
 ---
 
@@ -157,17 +157,21 @@ epl27-predict/
 
 ## The market contract (`prediction_market.py`)
 
-One deployed instance per fixture. Immutable — team names and date are set in the constructor and never change.
+One deployed instance per fixture. Immutable — team names, date and **kickoff time** are set in the constructor (`team1, team2, game_date, kickoff_ts`) and never change.
 
 ```python
-submit_prediction(pick)   # payable; min 2 GEN; pick ∈ {home, draw, away}; one per wallet
+submit_prediction(pick)   # payable; min 2 GEN; {home,draw,away}; one per wallet; reverts at/after kickoff
 resolve()                 # reads BBC + ESPN, reaches consensus, settles the pools
 claim()                   # winning predictor pulls their pari-mutuel share (last claimer sweeps dust)
 refund()                  # reclaim stake when a match goes to the refund path
-mark_postponed()          # admin-only, refund-only escape hatch (cannot take funds)
+mark_postponed()          # permissionless + source-verified; opens refunds only if sources confirm postponement
 ```
 
-> The multi-source resolution, dust sweep, name-normalization and postponement guard described here are live: all 50 MD1–5 contracts were (re)deployed from this revision of `prediction_market.py` before the season, so the on-chain code matches this document exactly.
+**Betting deadline (irreversible close).** The constructor takes `kickoff_ts` (Unix epoch seconds). `submit_prediction()` reverts at or after it — checked against the consensus transaction time (`gl.message_raw["datetime"]`), so no stake can be placed once the match kicks off, and therefore never once the result is known.
+
+**Postponements are verified, not asserted.** `mark_postponed()` is permissionless (like `resolve()`), callable only while `open` and only after kickoff + a 3h grace window, and it re-renders BBC + ESPN under `strict_eq`: refunds open **only** if the sources agree the fixture was postponed. A finished or unclear match reverts and stays `open`, so a loser can't turn a decided market into a refund. There is no admin key that controls funds.
+
+> The MD1–5 contracts currently live on Bradbury were deployed from the **previous** revision (3-arg constructor, no `kickoff_ts` deadline, admin-gated `mark_postponed`). The `kickoff_ts` deadline and source-verified postponement above are in this revision of `prediction_market.py`; redeploying the 50 markets to it (constructor ABI changed) is a separate step.
 
 **Payout:**
 
