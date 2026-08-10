@@ -139,10 +139,12 @@ for (let i = 0; i < fixtures.length; i++) {
   console.log(`\n-> ${label}`);
 
   try {
-    // Deploy the contract. Constructor signature: (team1, team2, game_date)
+    // Deploy the contract. Constructor: (team1, team2, game_date, kickoff_ts).
+    // kickoff_ts (Unix epoch seconds) is the on-chain betting deadline:
+    // submit_prediction() reverts at/after it, so no stake lands post-kickoff.
     const txHash = await client.deployContract({
       code: contractCode,
-      args: [f.home, f.away, game_date],
+      args: [f.home, f.away, game_date, f.kickoff_ts],
       leaderOnly: false,
     });
     console.log(`  tx: ${txHash}`);
