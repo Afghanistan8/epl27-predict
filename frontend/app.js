@@ -473,7 +473,7 @@ function matchDetailHtml(m, pools, mine, state) {
   const total = Number(pools.total) || 0;
   const isResolved = m.status === 'resolved' || m.status === 'finished';
   const isRefunding = m.status === 'refunding' || m.status === 'postponed';
-  const canPredict = m.status === 'scheduled' && !mine;
+  const canPredict = (m.status === 'scheduled' || m.status === 'open') && !mine;
   const liveScore = (m.status === 'live' || m.status === 'finished' || m.status === 'resolved')
     ? `<span class="live-score-display">${m.live_score_home ?? 0} <span class="live-score-sep">·</span> ${m.live_score_away ?? 0}</span>`
     : '';
