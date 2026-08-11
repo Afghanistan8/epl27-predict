@@ -51,9 +51,6 @@ const client = createClient({
 
 const sb = createSupabaseClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-await client.initializeConsensusSmartContract();
-console.log('Consensus contract initialized\n');
-
 // ----------------------------------------------------- checkpoint
 const checkpointPath = './deploy_checkpoint.json';
 let deployed = {};

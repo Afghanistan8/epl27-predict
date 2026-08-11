@@ -304,20 +304,20 @@ The frontend also needs the Supabase **publishable** key (`sb_publishable_…`) 
 
 ## MD1–5 contracts — verify on the explorer
 
-Every match is its own contract. The 50 for matchdays 1–5 are deployed on Bradbury from the admin wallet `0x4184bc5E5444F250767E8D33A49817A9B4FB0df3`. Matchday 1's ten (open [explorer-bradbury.genlayer.com](https://explorer-bradbury.genlayer.com) → paste an address → read `get_match_info` / `get_pools`):
+Every match is its own contract. The 50 for matchdays 1–5 are deployed on Bradbury (v0.3.0, with the on-chain betting deadline) from the admin wallet `0x4184bc5E5444F250767E8D33A49817A9B4FB0df3`. Matchday 1's ten (open [explorer-bradbury.genlayer.com](https://explorer-bradbury.genlayer.com) → paste an address → read `get_match_info` / `get_pools`):
 
 | Match | Contract |
 |---|---|
-| Arsenal v Coventry City | `0x9c7D8791659f8F4957fC1B7130eaB78755FEe4aA` |
-| Hull City v Manchester United | `0x7B3d8e6d39b042AD7443188b6aDae28C9A573d28` |
-| Ipswich v Sunderland | `0x457d137b5cDD904b0FdeCC6A6CeC59a2d633EDD4` |
-| Nottingham Forest v Leeds United | `0x9BE6E6A8Bad0bE0905aC23A61DAffEABb553aF7E` |
-| Everton v Crystal Palace | `0x3eE3f649719DED34abF6169C66BC337e67f14b96` |
-| Brentford v Tottenham | `0x55a6a4F0658d37C32867Afbe6B8889d082510a18` |
-| Manchester City v Bournemouth | `0xB866a785E0267Bfc0868aD74c2499D843bE3D889` |
-| Brighton v Aston Villa | `0x5bcB1Db6B08E321689872407F73e676F2224C283` |
-| Newcastle v Liverpool | `0xc800810E64b98d2bB4DeC798616F2482031D11A9` |
-| Fulham v Chelsea | `0x66fdee331474930504cF4D126a0a7BCDf02d7dC3` |
+| Arsenal v Coventry City | `0x7725D977c1a8F1459e797b995F1E36D014a8Ca6d` |
+| Hull City v Manchester United | `0x3917C6052761302985f5921Bee28e1eB6f4D80B9` |
+| Ipswich v Sunderland | `0x55E84Fe4fa88090dee798937B3fabe7A5B2D7ea4` |
+| Nottingham Forest v Leeds United | `0xe9Bfa74895d84f939a9DbC025B950Bbb9375b826` |
+| Everton v Crystal Palace | `0x926b09De11eC26F6431ba5f7107cB052240A3337` |
+| Brentford v Tottenham | `0xbD7beF85E39b714c099f663469cAae5884ff6e5b` |
+| Manchester City v Bournemouth | `0x4d3057176284aD652960b205E55359f1Fa4776F2` |
+| Brighton v Aston Villa | `0x80Fd3f050138f9A9B85A4DbD3a8ba1315f79657e` |
+| Newcastle v Liverpool | `0x0EbEEDBb91Fc5055503BE2f529fAb5EACF3C9c38` |
+| Fulham v Chelsea | `0xdd4ecaF65ce1D69e66E5cAf8437378c646408743` |
 
 The full 50 (MD1–5) are in `deploy_checkpoint.json`. The **AI Call** contract is `0xa9d1dfA3cC8F9B566F823D2d6e7bCaA45aAE2Be2`.
 

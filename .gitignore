@@ -16,7 +16,7 @@ __pycache__/
 # Local development
 .DS_Store
 *.log
-deploy_checkpoint.json
+deploy_checkpoint*.json
 
 # IDE
 .vscode/
