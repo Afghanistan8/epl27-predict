@@ -65,6 +65,13 @@ def _upcoming_page() -> str:
     return "Premier League. Arsenal v Coventry City. Kick off 19:00. Not started."
 
 
+def _abandoned_page() -> str:
+    return (
+        "Premier League. Arsenal v Coventry City. ABANDONED. "
+        "The match was abandoned after kick-off; no full-time score recorded."
+    )
+
+
 def _fenced(obj) -> str:
     """Wrap JSON in a ```json fence, as real LLMs do. The contract strips the
     fence then json.loads(). Fenced text is not valid JSON, so gltest's LLM
@@ -83,12 +90,66 @@ def _mock_result(vm, winner: int = 1, score: str = "2:1") -> None:
 
 
 def _mock_postponed_sources(vm, status: str = "postponed") -> None:
-    page = _postponed_page() if status == "postponed" else _finished_page()
+    """Back-compat shim: BOTH sources behave identically.
+
+    The contract now classifies each source independently and returns
+    {primary_status, secondary_status, primary_explicit}. This helper maps the
+    original single `status` onto both sources so the pre-existing tests keep
+    exercising the same scenarios (both agree postponed / both finished / both
+    unknown)."""
+    if status == "postponed":
+        page = _postponed_page()
+        out = {
+            "primary_status": "postponed",
+            "secondary_status": "postponed",
+            "primary_explicit": True,
+        }
+    elif status == "finished":
+        page = _finished_page()
+        out = {
+            "primary_status": "finished",
+            "secondary_status": "finished",
+            "primary_explicit": False,
+        }
+    else:  # "unknown"
+        page = _upcoming_page()
+        out = {
+            "primary_status": "unknown",
+            "secondary_status": "unknown",
+            "primary_explicit": False,
+        }
     vm.mock_web(r"bbc\.com", {"status": 200, "body": page})
     vm.mock_web(r"espn\.com", {"status": 200, "body": page})
+    vm.mock_llm(r"POSTPONED", _fenced(out))
+
+
+def _mock_postpone_verdict(
+    vm,
+    primary_status: str,
+    secondary_status: str,
+    primary_explicit: bool,
+    primary_page: str = None,
+    secondary_page: str = None,
+) -> None:
+    """Fine-grained control for the conflict / missing-secondary tests: sets the
+    two rendered pages and the LLM's per-source verdict independently.
+
+    Pass secondary_page="" to simulate an unavailable secondary — the contract
+    renders an empty body and forces secondary_status -> "unavailable" on-chain,
+    regardless of what the model returned for that field."""
+    vm.mock_web(
+        r"bbc\.com",
+        {"status": 200, "body": primary_page if primary_page is not None else _postponed_page()},
+    )
+    if secondary_page is not None:
+        vm.mock_web(r"espn\.com", {"status": 200, "body": secondary_page})
     vm.mock_llm(
         r"POSTPONED",
-        _fenced({"status": status, "evidence": "test"}),
+        _fenced({
+            "primary_status": primary_status,
+            "secondary_status": secondary_status,
+            "primary_explicit": primary_explicit,
+        }),
     )
 
 
@@ -241,13 +302,13 @@ def test_postpone_confirmed_opens_refunds(vm, c):
 
 def test_postpone_when_actually_finished_reverts(vm, c):
     # The key anti-abuse case: a match that FINISHED cannot be turned into a
-    # refund by calling mark_postponed — the sources say "finished".
+    # refund by calling mark_postponed — a source reports a finished result.
     _at(vm, KICKOFF_TS - 3600)
     _stake(vm, c, "alice", "home")
     _at(vm, KICKOFF_TS + GRACE + 60)
-    _mock_postponed_sources(vm, "finished")  # LLM returns status="finished"
+    _mock_postponed_sources(vm, "finished")  # both sources report finished
     vm.sender = create_address("loser")
-    with vm.expect_revert("not confirmed postponed"):
+    with vm.expect_revert("finished result"):
         c.mark_postponed()
     assert c.get_match_info()["status"] == "open"  # stays open → can resolve
 
@@ -258,7 +319,7 @@ def test_postpone_unknown_reverts(vm, c):
     _at(vm, KICKOFF_TS + GRACE + 60)
     _mock_postponed_sources(vm, "unknown")
     vm.sender = create_address("anyone")
-    with vm.expect_revert("not confirmed postponed"):
+    with vm.expect_revert("does not confirm postponement"):
         c.mark_postponed()
     assert c.get_match_info()["status"] == "open"
 
@@ -278,6 +339,131 @@ def test_postpone_cannot_unwind_resolved(vm, c):
     vm.sender = create_address("loser")
     with vm.expect_revert("still open"):
         c.mark_postponed()
+
+
+# ========================================================================
+# POSTPONEMENT: CONFLICTS, MISSING SECONDARY, ABANDONED-AFTER-PLAY
+# (second steward request)
+# ========================================================================
+
+def test_postpone_abandoned_after_play_opens_refunds(vm, c):
+    # A match that KICKED OFF and was then abandoned (no full-time score), with
+    # both sources explicitly agreeing "abandoned", opens the refund path.
+    # This is well after kickoff + grace, i.e. play had begun.
+    _at(vm, KICKOFF_TS - 3600)
+    _stake(vm, c, "alice", "home")
+    _stake(vm, c, "bob", "away")
+    _at(vm, KICKOFF_TS + GRACE + 3600)  # play began, then called
+    _mock_postpone_verdict(
+        vm,
+        primary_status="postponed",
+        secondary_status="postponed",
+        primary_explicit=True,
+        primary_page=_abandoned_page(),
+        secondary_page=_abandoned_page(),
+    )
+    vm.sender = create_address("anyone")
+    c.mark_postponed()
+    assert c.get_match_info()["status"] == "refunding"
+
+
+def test_postpone_conflict_primary_postponed_secondary_finished_reverts(vm, c):
+    # CONFLICT: primary says postponed, secondary shows a finished score.
+    # A finished result on EITHER source must block refunds → stays open.
+    _at(vm, KICKOFF_TS - 3600)
+    _stake(vm, c, "alice", "home")
+    _at(vm, KICKOFF_TS + GRACE + 60)
+    _mock_postpone_verdict(
+        vm,
+        primary_status="postponed",
+        secondary_status="finished",
+        primary_explicit=True,
+        primary_page=_postponed_page(),
+        secondary_page=_finished_page(),
+    )
+    vm.sender = create_address("loser")
+    with vm.expect_revert("finished result"):
+        c.mark_postponed()
+    assert c.get_match_info()["status"] == "open"
+
+
+def test_postpone_conflict_primary_finished_secondary_postponed_reverts(vm, c):
+    # CONFLICT the other way: primary shows a finished score, secondary says
+    # postponed. Still blocked — a decided match is never refunded.
+    _at(vm, KICKOFF_TS - 3600)
+    _stake(vm, c, "alice", "home")
+    _at(vm, KICKOFF_TS + GRACE + 60)
+    _mock_postpone_verdict(
+        vm,
+        primary_status="finished",
+        secondary_status="postponed",
+        primary_explicit=False,
+        primary_page=_finished_page(),
+        secondary_page=_postponed_page(),
+    )
+    vm.sender = create_address("loser")
+    with vm.expect_revert("finished result"):
+        c.mark_postponed()
+    assert c.get_match_info()["status"] == "open"
+
+
+def test_postpone_missing_secondary_explicit_primary_opens_refunds(vm, c):
+    # Safe missing-secondary policy: secondary unavailable (empty render) but
+    # the primary is EXPLICIT → fall back to primary-only and open refunds.
+    _at(vm, KICKOFF_TS - 3600)
+    _stake(vm, c, "alice", "home")
+    _stake(vm, c, "bob", "away")
+    _at(vm, KICKOFF_TS + GRACE + 60)
+    _mock_postpone_verdict(
+        vm,
+        primary_status="postponed",
+        secondary_status="unavailable",
+        primary_explicit=True,
+        primary_page=_postponed_page(),
+        secondary_page="",  # unavailable → contract forces "unavailable"
+    )
+    vm.sender = create_address("anyone")
+    c.mark_postponed()
+    assert c.get_match_info()["status"] == "refunding"
+
+
+def test_postpone_missing_secondary_not_explicit_stays_open(vm, c):
+    # Missing secondary AND primary not explicit → too weak; stay OPEN.
+    _at(vm, KICKOFF_TS - 3600)
+    _stake(vm, c, "alice", "home")
+    _at(vm, KICKOFF_TS + GRACE + 60)
+    _mock_postpone_verdict(
+        vm,
+        primary_status="postponed",
+        secondary_status="unavailable",
+        primary_explicit=False,  # e.g. just missing a score, no explicit word
+        primary_page=_postponed_page(),
+        secondary_page="",
+    )
+    vm.sender = create_address("anyone")
+    with vm.expect_revert("primary not explicit"):
+        c.mark_postponed()
+    assert c.get_match_info()["status"] == "open"
+
+
+def test_postpone_secondary_unknown_stays_open(vm, c):
+    # Primary explicitly postponed, but secondary present and "unknown" (does
+    # not confirm) → conservative: stay OPEN.
+    _at(vm, KICKOFF_TS - 3600)
+    _stake(vm, c, "alice", "home")
+    _at(vm, KICKOFF_TS + GRACE + 60)
+    _mock_postpone_verdict(
+        vm,
+        primary_status="postponed",
+        secondary_status="unknown",
+        primary_explicit=True,
+        primary_page=_postponed_page(),
+        secondary_page=_upcoming_page(),
+    )
+    vm.sender = create_address("anyone")
+    with vm.expect_revert("secondary source does not confirm"):
+        c.mark_postponed()
+    assert c.get_match_info()["status"] == "open"
 
 
 # ---- pytest wrappers (so `pytest tests/` discovers them too) -------------
@@ -307,6 +493,12 @@ _ALL = [
     test_postpone_when_actually_finished_reverts,
     test_postpone_unknown_reverts,
     test_postpone_cannot_unwind_resolved,
+    test_postpone_abandoned_after_play_opens_refunds,
+    test_postpone_conflict_primary_postponed_secondary_finished_reverts,
+    test_postpone_conflict_primary_finished_secondary_postponed_reverts,
+    test_postpone_missing_secondary_explicit_primary_opens_refunds,
+    test_postpone_missing_secondary_not_explicit_stays_open,
+    test_postpone_secondary_unknown_stays_open,
 ]
 
 # Expose pytest-visible test_* functions at module scope.

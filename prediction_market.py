@@ -1,4 +1,4 @@
-# v0.3.0
+# v0.3.1
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 
 from genlayer import *
@@ -351,7 +351,7 @@ Your response must be parseable JSON with no prefix or suffix.
         match, anyone can call mark_postponed() to open refunds for a match that
         was called off. What makes it safe is that it cannot be asserted — it
         must be *verified* against the same public sources, under the same
-        validator consensus, as a result is:
+        validator consensus, as a result is.
 
         Constraints (all enforced on-chain):
         1. Only while status is OPEN — it can never unwind a settled market.
@@ -359,15 +359,28 @@ Your response must be parseable JSON with no prefix or suffix.
            declared before or during the match window, so it can't be used to
            dodge a bet mid-play. By the time it's callable, the sources show
            either a full-time score or an explicit postponement.
-        3. The sources must AGREE (gl.eq_principle.strict_eq) that this exact
-           fixture is POSTPONED / CANCELLED / ABANDONED and has NO full-time
-           score. If the match actually finished (a result exists) or the status
-           is unclear, the call REVERTS and the market stays OPEN — so a loser
-           can never convert a decided match into a refund.
+        3. Each source is classified INDEPENDENTLY ("postponed" / "finished" /
+           "unknown", plus "unavailable" for a missing secondary) and the two
+           statuses are cross-checked ON-CHAIN, after consensus under
+           gl.eq_principle.strict_eq:
+             - If EITHER source shows a FINISHED result -> REVERT. This rejects
+               both a plainly finished match AND a conflict (one source says
+               postponed, the other finished): a decided match can never be
+               turned into a refund.
+             - The PRIMARY (authoritative) source must itself say postponed.
+             - The SECONDARY must AGREE (also postponed). If the secondary is
+               unavailable, fall back to primary-only ONLY when the primary is
+               EXPLICIT (contains a postponed / called-off / cancelled /
+               suspended / abandoned word); otherwise stay OPEN. Any other
+               combination (e.g. secondary "unknown") stays OPEN.
+           A suspended / abandoned / called-off fixture with NO full-time score
+           is treated as postponed; a match that kicked off is only postponable
+           if a source EXPLICITLY says it was abandoned / not completed.
 
         On confirmation, status -> REFUNDING and every staker can reclaim their
         OWN stake 1:1 via refund(). Nobody — caller included — can be paid a
         result this way; the only reachable outcome is a universal 1:1 refund.
+        Preferring safety, ANY ambiguity or conflict leaves the market OPEN.
         """
         if self.status != STATUS_OPEN:
             raise gl.vm.UserError("can only postpone matches that are still open")
@@ -392,10 +405,11 @@ Your response must be parseable JSON with no prefix or suffix.
                 secondary = gl.nondet.web.render(resolution_url_2, mode="text")
             except Exception:
                 secondary = ""
+            secondary_present = bool(secondary.strip())
 
             task = f"""
 You are checking whether a scheduled Premier League fixture was POSTPONED (also
-called off, cancelled, or abandoned) rather than played to a finish.
+called off, cancelled, suspended, or abandoned) rather than played to a finish.
 
 Fixture:
   Home team: {team1}
@@ -411,46 +425,110 @@ PRIMARY source (BBC), authoritative:
 {primary}
 End of PRIMARY.
 
-SECONDARY source (ESPN), cross-check only (may be empty):
+SECONDARY source (ESPN), independent cross-check (may be empty):
 {secondary}
 End of SECONDARY.
 
-Classify THIS fixture into exactly one status, based on the PRIMARY source
-(use the SECONDARY only to cross-check):
-- "postponed": the source explicitly marks this fixture as postponed, called
-  off, cancelled, suspended or abandoned, AND shows no full-time result for it.
-- "finished": the source shows a full-time score for this fixture.
-- "unknown": you cannot clearly tell, the fixture is not shown, it appears to be
-  upcoming/scheduled, or it is currently in progress.
+Classify EACH source INDEPENDENTLY. For a given source, the status is:
+- "postponed": that source EXPLICITLY marks THIS fixture as postponed, called
+  off, cancelled, suspended, or abandoned, AND shows NO full-time score for it.
+  A match that started but was then abandoned / not completed counts as
+  "postponed" ONLY if the source explicitly says it was abandoned or not
+  completed (no full-time score).
+- "finished": that source shows a FULL-TIME / final score for this fixture
+  (the match was played to completion).
+- "unknown": you cannot clearly tell from that source — the fixture is absent,
+  merely scheduled/upcoming, in progress, or lacks explicit wording. Absence of
+  a score, or of the fixture, is "unknown", NOT "postponed".
 
-Be conservative: only answer "postponed" if the source SAYS SO explicitly. A
-fixture merely being absent, or lacking a score, is "unknown", NOT "postponed".
+Rules:
+- Judge the PRIMARY only from the PRIMARY text, and the SECONDARY only from the
+  SECONDARY text. Do NOT let one source's wording decide the other's status.
+- If the SECONDARY text is empty/blank, set "secondary_status" to "unavailable".
+- Be conservative: only say "postponed" when the wording is EXPLICIT. When in
+  doubt, use "unknown".
+- "primary_explicit" is true ONLY if the PRIMARY text contains an explicit
+  postponed / called-off / cancelled / suspended / abandoned wording for this
+  fixture (not merely a missing score).
 
 Respond ONLY with this JSON, nothing else:
 {{
-    "status": str,   // "postponed" | "finished" | "unknown"
-    "evidence": str  // short quote/paraphrase of the wording that decided it
+    "primary_status": str,    // "postponed" | "finished" | "unknown"
+    "secondary_status": str,  // "postponed" | "finished" | "unknown" | "unavailable"
+    "primary_explicit": bool  // true only on explicit postponed-type wording in PRIMARY
 }}
 Your response must be parseable JSON with no prefix or suffix.
 """
             result = (
                 gl.nondet.exec_prompt(task).replace("```json", "").replace("```", "")
             )
-            return json.loads(result)
+            parsed = json.loads(result)
+            # Normalise to a fixed, comparable shape so strict_eq compares only
+            # constrained enum/bool fields (free text never reaches byte-exact
+            # consensus). If the model omitted the secondary and none was
+            # rendered, record it as "unavailable".
+            p = str(parsed.get("primary_status", "unknown"))
+            s = str(parsed.get("secondary_status", "unknown"))
+            if not secondary_present:
+                s = "unavailable"
+            return {
+                "primary_status": p,
+                "secondary_status": s,
+                "primary_explicit": bool(parsed.get("primary_explicit", False)),
+            }
 
         verdict = gl.eq_principle.strict_eq(check_postponed)
 
-        if verdict["status"] != "postponed":
-            # Not confirmed postponed — do NOT open refunds. Leave OPEN so the
-            # match can still be resolved normally (or re-checked later).
+        primary_status = verdict["primary_status"]
+        secondary_status = verdict["secondary_status"]
+        primary_explicit = bool(verdict["primary_explicit"])
+
+        # --- Conflict / safety enforcement (deterministic, on the agreed verdict).
+        # Prefer safety: any ambiguity or conflict leaves the market OPEN so it
+        # can still be resolved normally later.
+
+        # 1. A FINISHED result on EITHER source blocks the refund path. This
+        #    covers both a plainly finished match and a CONFLICT (one source
+        #    postponed, the other finished) — a decided match is never refunded.
+        if primary_status == "finished" or secondary_status == "finished":
             raise gl.vm.UserError(
-                "not confirmed postponed by sources (status: "
-                + str(verdict["status"])
-                + ")"
+                "a source reports a finished result; not postponed "
+                "(primary: " + str(primary_status)
+                + ", secondary: " + str(secondary_status) + ")"
+            )
+
+        # 2. The authoritative (primary) source must itself confirm postponement.
+        if primary_status != "postponed":
+            raise gl.vm.UserError(
+                "primary source does not confirm postponement (primary: "
+                + str(primary_status) + ")"
+            )
+
+        # 3. Cross-check the secondary and set an explicit agreement label.
+        if secondary_status == "postponed":
+            agreement = "agree"
+        elif secondary_status == "unavailable":
+            # Safe missing-secondary policy: fall back to primary-only ONLY when
+            # the primary is EXPLICIT; otherwise stay OPEN on weak evidence.
+            if not primary_explicit:
+                raise gl.vm.UserError(
+                    "secondary source unavailable and primary not explicit; "
+                    "staying open (primary-only evidence too weak)"
+                )
+            agreement = "primary-only"
+        else:
+            # secondary is "unknown" (or unexpected) — it does not confirm.
+            raise gl.vm.UserError(
+                "secondary source does not confirm postponement (secondary: "
+                + str(secondary_status) + "); staying open"
             )
 
         self.status = STATUS_REFUNDING
-        return verdict
+        return {
+            "primary_status": primary_status,
+            "secondary_status": secondary_status,
+            "agreement": agreement,
+        }
 
     @gl.public.write
     def refund(self) -> None:
